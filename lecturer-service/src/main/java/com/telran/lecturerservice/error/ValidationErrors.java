@@ -11,7 +11,7 @@ public class ValidationErrors {
 
     public static final String NAME_MANDATORY = VALIDATION_ERROR + "Name is mandatory";
     public static final String NAME_NOT_EMPTY = VALIDATION_ERROR + "Name cannot be empty";
-    public static final String NAME_SIZE = VALIDATION_ERROR + "Name must be between 2 and 50 characters";\
+    public static final String NAME_SIZE = VALIDATION_ERROR + "Name must be between 2 and 50 characters";
 
     public static final String PHONE_MANDATORY = VALIDATION_ERROR + "Phone is mandatory";
     public static final String PHONE_NOT_EMPTY = VALIDATION_ERROR + "Phone cannot be empty";
