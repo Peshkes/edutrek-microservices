@@ -4,6 +4,7 @@ import com.telran.jwtservice.service.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,8 +16,8 @@ import java.util.List;
 public class JwtController {
     JwtService jwtService;
 
-    @RequestMapping("/username")
-    public String getUsername(String token) {
+    @RequestMapping("/username/{token}")
+    public String getUsername(@PathVariable String token) {
         return jwtService.getUsername(token);
     }
 

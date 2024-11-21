@@ -1,10 +1,9 @@
 package com.telran.authenticationservice.controller;
 
 import com.telran.authenticationservice.dto.*;
+import com.telran.authenticationservice.feign.JwtClient;
 import com.telran.authenticationservice.persistence.AccountDocument;
 import com.telran.authenticationservice.service.AuthenticationJWTService;
-import com.goodquestion.edutrek_server.modules.notification.events.SseService;
-import com.goodquestion.edutrek_server.utility_service.JwtService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,9 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Validated
@@ -30,9 +27,8 @@ import java.util.List;
 public class AuthenticationController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationController.class);
-    private final JwtService jwtService;
+    private final JwtClient jwtClient;
     private final AuthenticationJWTService authenticationService;
-    private final SseService sseService;
 //    private final AuthenticationBaseService authenticationService;
 
     @GetMapping("")
@@ -75,11 +71,11 @@ public class AuthenticationController {
 //    public ResponseEntity<String> refreshToken(HttpServletRequest request, HttpServletResponse response) {
     public ResponseEntity<JWTBodyReturnDto> refreshToken(HttpServletRequest request, HttpServletResponse response) {
 //        String refreshToken = jwtService.getRefreshToken(request);
-        String refreshToken = jwtService.extractTokenFromAuthorizationHeader(request);
+        String authHeader = request.getHeader("Authorization");
+        String refreshToken = jwtClient.extractTokenFromAuthorizationHeader(authHeader);
         AuthenticationResultDto result = authenticationService.refreshToken(refreshToken);
 //        response.addCookie(createCookie("accessToken", result.getAccessToken()));
 //        response.addCookie(createCookie("refreshToken", result.getRefreshToken()));
-        log.info("Refreshing token: " + result.getAccessToken() + " " + result.getRefreshToken());
         //  return ResponseEntity.ok("Refresh successful");
         return ResponseEntity.ok(new JWTBodyReturnDto(result.getAccessToken(), result.getRefreshToken()));
     }
@@ -122,13 +118,6 @@ public class AuthenticationController {
     @ResponseStatus(HttpStatus.OK)
     public AccountDocument deleteAccount(@PathVariable @UUID String id) {
         return authenticationService.deleteAccount(java.util.UUID.fromString(id));
-    }
-
-    @GetMapping("/ping")
-    @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<String> ping() {
-        System.out.println("Zapingovalsya in " + LocalDateTime.now());
-        return new ResponseEntity<>("Pong", HttpStatus.OK);
     }
 
     //UTILS
