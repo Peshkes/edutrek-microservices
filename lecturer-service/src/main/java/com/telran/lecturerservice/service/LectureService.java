@@ -2,12 +2,9 @@ package com.telran.lecturerservice.service;
 
 import com.telran.lecturerservice.error.DatabaseException.*;
 import com.telran.lecturerservice.error.LecturerNotFoundException;
-import com.telran.lecturerservice.persistence.share.BaseLecturerByGroup;
-import com.telran.lecturerservice.persistence.share.ILecturerByGroupRepository;
-import com.telran.lecturerservice.persistence.share.LecturersByGroupArchiveRepository;
-import com.telran.lecturerservice.persistence.share.LecturersByGroupRepository;
 import com.telran.lecturerservice.dto.LecturerDataDto;
 import com.telran.lecturerservice.dto.LecturerPaginationResponseDto;
+import com.telran.lecturerservice.feign.GroupClient;
 import com.telran.lecturerservice.persistence.*;
 import com.telran.lecturerservice.logging.Loggable;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
@@ -27,8 +25,8 @@ public class LectureService {
 
     private final LecturerRepository repository;
     private final LecturerArchiveRepository archiveRepository;
-    private final LecturersByGroupRepository lecturersByGroupRepository;
-    private final LecturersByGroupArchiveRepository lecturersByGroupArchiveRepository;
+
+    private final GroupClient groupClient;
 
     @Loggable
     public BaseLecturer getById(UUID id) {
@@ -66,27 +64,26 @@ public class LectureService {
     @Loggable
     @Transactional
     public BaseLecturer deleteById(UUID id) {
-        BaseLecturer lecturer = deleteFromRepository(id, repository, lecturersByGroupRepository);
-
-        if (lecturer == null) lecturer = deleteFromRepository(id, archiveRepository, lecturersByGroupArchiveRepository);
-        if (lecturer == null) throw new LecturerNotFoundException(id.toString());
-
+        BaseLecturer lecturer = repository.findById(id).orElse(null);
+        if (lecturer != null) {
+            deleteLecturer(id, groupClient::deleteCurrentLecturersByLecturerId, repository::deleteById);
+        } else {
+            lecturer = archiveRepository.findById(id).orElse(null);
+            if (lecturer != null)
+                deleteLecturer(id, groupClient::deleteArchiveLecturersByLecturerId, archiveRepository::deleteById);
+            else
+                throw new LecturerNotFoundException(id.toString());
+        }
         return lecturer;
     }
 
-    private <T extends BaseLecturer, U extends BaseLecturerByGroup> T deleteFromRepository(
-            UUID id, ILecturerRepository<T> lecturerRepo, ILecturerByGroupRepository<U> lecturerByGroupRepo) {
-        T entity = lecturerRepo.findById(id).orElse(null);
-        if (entity != null) {
-            List<U> lecturersByGroup = lecturerByGroupRepo.getByGroupId(id);
-            try {
-                if (!lecturersByGroup.isEmpty()) lecturerByGroupRepo.deleteAll(lecturersByGroup);
-                lecturerRepo.deleteById(id);
-            } catch (Exception e) {
-                throw new DatabaseDeletingException(e.getMessage());
-            }
+    private void deleteLecturer(UUID id, Consumer<UUID> groupClientMethod, Consumer<UUID> repositoryMethod) {
+        try {
+            groupClientMethod.accept(id);
+            repositoryMethod.accept(id);
+        } catch (Exception e) {
+            throw new DatabaseDeletingException(e.getMessage());
         }
-        return entity;
     }
 
     @Loggable

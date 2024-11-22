@@ -111,9 +111,8 @@
 
         <module>mailing-service</module>
         <module>logining-service</module>
-        <module>security-service</module>
+        <module>security-service-gateway</module>
         <module>jwt-service</module>
-        <module>sse-service</module>
     </modules>
 
 </project>

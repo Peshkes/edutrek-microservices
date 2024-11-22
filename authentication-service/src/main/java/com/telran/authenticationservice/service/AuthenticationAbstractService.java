@@ -149,6 +149,14 @@ public abstract class AuthenticationAbstractService {
         }
     }
 
+    public AccountDocument findAccountDocumentByLogin(String login) {
+        return accountRepository.findAccountDocumentByLogin(login).orElse(null);
+    }
+
+    public AccountDocument findAccountDocumentByAccountId(UUID id) {
+        return accountRepository.findById(id).orElse(null);
+    }
+
     // UTILITY
 
     private String generatePassword() {
