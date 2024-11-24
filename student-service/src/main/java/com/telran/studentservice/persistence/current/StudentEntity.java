@@ -21,8 +21,4 @@ public class StudentEntity extends AbstractStudent {
     public StudentEntity(StudentsDataDto studentsDataDto, int statusId) {
         super(studentsDataDto,statusId);
     }
-
-    public StudentEntity(AbstractContacts contactData, StudentsFromContactDataDto studentsDataDto) {
-        super(contactData, studentsDataDto);
-    }
 }
