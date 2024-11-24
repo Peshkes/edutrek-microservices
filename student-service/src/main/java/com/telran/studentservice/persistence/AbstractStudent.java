@@ -1,5 +1,7 @@
 package com.telran.studentservice.persistence;
 
+import com.telran.studentservice.dto.StudentsDataDto;
+import com.telran.studentservice.persistence.current.StudentEntity;
 import jakarta.persistence.MappedSuperclass;
 import lombok.*;
 import jakarta.persistence.*;
@@ -58,19 +60,6 @@ public abstract class AbstractStudent {
         this.branchId = studentsDataDto.getBranchId();
         this.targetCourseId = studentsDataDto.getTargetCourseId();
         this.comment = studentsDataDto.getComment();
-        this.fullPayment = studentsDataDto.getFullPayment();
-        this.documentsDone = studentsDataDto.isDocumentsDone();
-    }
-
-    public AbstractStudent(AbstractContacts contactData, StudentsFromContactDataDto studentsDataDto) {
-        this.studentId = contactData.getContactId();
-        this.contactName = contactData.getContactName();
-        this.phone = contactData.getPhone();
-        this.email = contactData.getEmail();
-        this.statusId = contactData.getStatusId();
-        this.branchId = contactData.getBranchId();
-        this.targetCourseId = contactData.getTargetCourseId();
-        this.comment = contactData.getComment();
         this.fullPayment = studentsDataDto.getFullPayment();
         this.documentsDone = studentsDataDto.isDocumentsDone();
     }
