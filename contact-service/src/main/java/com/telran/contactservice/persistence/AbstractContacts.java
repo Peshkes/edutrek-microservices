@@ -1,6 +1,7 @@
 package com.telran.contactservice.persistence;
 
-import com.telran.contactservice.dto.ContactsDataDto;
+
+import com.telran.contactservice.dto.AbstractStudentDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
@@ -32,29 +33,7 @@ public class AbstractContacts {
     @Column(name = "comment")
     private String comment;
 
-    public AbstractContacts(String contactName, String phone, String email, int statusId, int branchId, UUID targetCourseId, String comment) {
-        this.contactId = UUID.randomUUID();
-        this.contactName = contactName;
-        this.phone = phone;
-        this.email = email;
-        this.statusId = statusId;
-        this.branchId = branchId;
-        this.targetCourseId = targetCourseId;
-        this.comment = comment;
-    }
-
-    public AbstractContacts(AbstractContacts contactEntity) {
-        this.contactId = contactEntity.getContactId();
-        this.contactName = contactEntity.getContactName();
-        this.phone = contactEntity.getPhone();
-        this.email = contactEntity.getEmail();
-        this.statusId = contactEntity.getStatusId();
-        this.branchId = contactEntity.getBranchId();
-        this.targetCourseId = contactEntity.getTargetCourseId();
-        this.comment = contactEntity.getComment();
-    }
-
-    public AbstractContacts(AbstractStudent abstractStudent) {
+    public AbstractContacts(AbstractStudentDto abstractStudent) {
         this.contactId = abstractStudent.getStudentId();
         this.contactName = abstractStudent.getContactName();
         this.phone = abstractStudent.getPhone();
@@ -65,14 +44,4 @@ public class AbstractContacts {
         this.comment = abstractStudent.getComment();
     }
 
-    public AbstractContacts(ContactsDataDto contactsDataDto) {
-        this.contactId = UUID.randomUUID();
-        this.contactName = contactsDataDto.getContactName();
-        this.phone = contactsDataDto.getPhone();
-        this.email = contactsDataDto.getEmail();
-        this.statusId = contactsDataDto.getStatusId();
-        this.branchId = contactsDataDto.getBranchId();
-        this.targetCourseId = contactsDataDto.getTargetCourseId();
-        this.comment = contactsDataDto.getComment();
-    }
 }
