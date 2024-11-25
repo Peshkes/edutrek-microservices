@@ -17,8 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.security.web.csrf.CsrfTokenRepository;
-import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+//import org.springframework.security.web.csrf.CsrfTokenRepository;
+//import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -51,7 +51,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/auth/login/{id}", "/auth/password/{id}").access(ownerAuthorizationManager)
                         .requestMatchers(HttpMethod.GET, "/auth/ping").permitAll()
                         .requestMatchers(HttpMethod.GET, "/auth/subscribe/{clientId}").authenticated()
-
 
                         .requestMatchers(HttpMethod.GET, "/branches", "/branches/{id}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/branches").hasRole(PRINCIPAL.toString())
@@ -136,12 +135,12 @@ public class SecurityConfig {
         return source;
     }
 
-    @Bean
-    public CsrfTokenRepository csrfTokenRepository() {
-        HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
-        repository.setHeaderName("X-CSRF-TOKEN");
-        return repository;
-    }
+//    @Bean
+//    public CsrfTokenRepository csrfTokenRepository() {
+//        HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
+//        repository.setHeaderName("X-CSRF-TOKEN");
+//        return repository;
+//    }
 
     @Bean
     public DaoAuthenticationProvider daoAuthenticationProvider() {

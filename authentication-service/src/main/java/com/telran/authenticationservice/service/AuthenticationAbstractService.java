@@ -10,6 +10,9 @@ import com.telran.authenticationservice.feign.MailingClient;
 import com.telran.authenticationservice.logging.Loggable;
 import com.telran.authenticationservice.persistence.AccountDocument;
 import com.telran.authenticationservice.persistence.AccountRepository;
+import feign.FeignException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import com.telran.authenticationservice.error.AuthenticationException.UsernameNotFoundException;
@@ -31,7 +34,7 @@ public abstract class AuthenticationAbstractService {
         this.accountRepository = accountRepository;
     }
 
-    public abstract AuthenticationResultDto signIn(AuthenticationDataDto authenticationDataDto);
+    public abstract JWTBodyReturnDto signIn(AuthenticationDataDto authenticationDataDto);
 
     @Loggable
     public PublicAccountDataDto getAccountById(UUID id) {
@@ -56,9 +59,11 @@ public abstract class AuthenticationAbstractService {
 
     @Loggable
     @Transactional
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addNewAccount(AddNewAccountRequestDto addNewAccountRequestDto) {
         String email = addNewAccountRequestDto.getEmail();
-        if (accountRepository.existsAccountDocumentByEmail(email)) throw new AuthenticationException.EmailAlreadyExistsException(email);
+        if (accountRepository.existsAccountDocumentByEmail(email))
+            throw new AuthenticationException.EmailAlreadyExistsException(email);
 
         String login = generateLogin(extractLoginFromEmail(email));
         String password = generatePassword();
@@ -71,7 +76,7 @@ public abstract class AuthenticationAbstractService {
         try {
             mailingClient.sendRegistrationEmail(new RegistrationEmailDto(email, login, password));
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new AuthenticationException.SendingEmailException(e.getMessage());
         }
     }
 
@@ -144,7 +149,7 @@ public abstract class AuthenticationAbstractService {
         try {
             accountRepository.save(accountDocument);
             return accountDocument.getName();
-        } catch (Exception e){
+        } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
     }

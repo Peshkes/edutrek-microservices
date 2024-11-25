@@ -12,4 +12,6 @@ public class AuthenticationErrors {
     static final String ROLE_EXISTS = "Role already exists: ";
     static final String ROLE_NOT_EXISTS = "Role doesn't exist: ";
     static final String REFRESH_TOKEN_NOT_FOUND = "Refresh token not found.";
+    static final String TOKEN_IS_NULL = "Any token is null.";
+    static final String SENDING_MAIL = "Emails wasn't sent: ";
 }
