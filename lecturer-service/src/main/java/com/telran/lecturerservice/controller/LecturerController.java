@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class LecturerController {
 
-    private final LectureService service;
+    private final LectureService lectureService;
 
     @GetMapping("/paginated")
     @ResponseStatus(HttpStatus.OK)
@@ -24,42 +24,42 @@ public class LecturerController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit
     ) {
-        return service.getAllPaginated(page, limit);
+        return lectureService.getAllPaginated(page, limit);
     }
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public BaseLecturer getLecturerById(@PathVariable @UUID String id) {
-            return service.getById(java.util.UUID.fromString(id));
+            return lectureService.getById(java.util.UUID.fromString(id));
     }
 
     @PostMapping("")
     public ResponseEntity<String> addNewLecturer(@RequestBody @Valid LecturerDataDto data) {
-        service.addEntity(data);
+        lectureService.addEntity(data);
         return new ResponseEntity<>("Lecturer created", HttpStatus.CREATED);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteLecturerById(@PathVariable @UUID String id) {
-            service.deleteById(java.util.UUID.fromString(id));
+            lectureService.deleteById(java.util.UUID.fromString(id));
             return new ResponseEntity<>("Lecturer deleted", HttpStatus.OK);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<String> updateLecturerById(@PathVariable @UUID String id, @RequestBody @Valid LecturerDataDto data) {
-            service.updateById(java.util.UUID.fromString(id), data);
+            lectureService.updateById(java.util.UUID.fromString(id), data);
             return new ResponseEntity<>("Lecturer updated", HttpStatus.OK);
     }
 
     @PutMapping("/archive/{id}")
     public ResponseEntity<String> archiveLecturerById(@PathVariable @UUID String id, @RequestBody String reason) {
-        service.archiveById(java.util.UUID.fromString(id), reason);
+        lectureService.archiveById(java.util.UUID.fromString(id), reason);
         return new ResponseEntity<>("Lecturer archived", HttpStatus.OK);
     }
 
     @GetMapping("exists/{id}")
     public ResponseEntity<String> existsLecturerById(@PathVariable @UUID String id) {
-        boolean exists = service.existsById(java.util.UUID.fromString(id));
+        boolean exists = lectureService.existsById(java.util.UUID.fromString(id));
         return new ResponseEntity<>(String.valueOf(exists), HttpStatus.OK);
     }
 }

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.util.UUID;
 
 
-@FeignClient(name = "StudentClient", url = "https://jsonplaceholder.typicode.com/")
+@FeignClient(name = "StudentClient", url = "http://student-service:8080")
 public interface StudentFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/students/exists/{id}")
@@ -23,7 +23,7 @@ public interface StudentFeignClient {
     @RequestMapping(method = RequestMethod.GET, value = "/students/{id}")
     AbstractStudentDto promoteContactToStudentById(@PathVariable UUID id, StudentsFromContactDataDto data);
 
-    @RequestMapping(method = RequestMethod.POST, value = "/find_students")
+    @RequestMapping(method = RequestMethod.POST, value = "/students/find_students")
     FoundEntitiesDto findStudents(@RequestBody FindStudentsDto data);
 
     @RequestMapping(method = RequestMethod.POST, value = "")

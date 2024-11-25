@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.util.UUID;
 
 
-@FeignClient(name = "ContactClient", url = "https://jsonplaceholder.typicode.com/")
+@FeignClient(name = "ContactClient", url = "http://contact-service:8080")
 public interface ContactFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/contacts/exists/{phone}/{email}")

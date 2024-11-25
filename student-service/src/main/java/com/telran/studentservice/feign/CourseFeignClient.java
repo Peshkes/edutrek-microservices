@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.util.UUID;
 
 
-@FeignClient(name = "CourseClient", url = "https://jsonplaceholder.typicode.com/")
+@FeignClient(name = "CourseClient", url = "http://course-service:8080")
 public interface CourseFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/courses/exists/{id}")

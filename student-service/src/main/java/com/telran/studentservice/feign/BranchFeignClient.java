@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 
-@FeignClient(name = "BranchClient", url = "https://jsonplaceholder.typicode.com/")
+@FeignClient(name = "BranchClient", url = "http://branche-service:8080")
 public interface BranchFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/branches/exists/{id}")

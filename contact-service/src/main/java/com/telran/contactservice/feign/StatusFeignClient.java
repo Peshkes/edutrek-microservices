@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 
-@FeignClient(name = "StatusesClient", url = "https://jsonplaceholder.typicode.com/")
+@FeignClient(name = "StatusesClient", url = "http://status-service:8080")
 public interface StatusFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/statuses/{id}")

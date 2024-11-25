@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.UUID;
 
-@FeignClient(name = "LecturerClient", url = "https://jsonplaceholder.typicode.com")
+@FeignClient(name = "LecturerClient", url = "http://lecturer-service:8080")
 public interface LecturerClient {
     @GetMapping("/lecturers/exists/{id}")
     Boolean existsById(@PathVariable("id") UUID id);

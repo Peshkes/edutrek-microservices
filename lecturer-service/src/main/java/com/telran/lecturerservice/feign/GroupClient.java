@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.UUID;
 
-@FeignClient(name = "GroupClient", url = "https://jsonplaceholder.typicode.com")
+@FeignClient(name = "GroupClient", url = "http://group-service:8080")
 public interface GroupClient {
     @DeleteMapping("/lecturers_by_groups/current/{lecturer_id}")
     void deleteCurrentLecturersByLecturerId(@PathVariable UUID lecturer_id);
