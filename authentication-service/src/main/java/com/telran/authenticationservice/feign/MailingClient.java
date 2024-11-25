@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "MailingClient", url = "https://jsonplaceholder.typicode.com")
+@FeignClient(name = "MailingClient", url = "http://branche-service:8080")
 public interface MailingClient {
 
     @PostMapping("/mailing/registration")

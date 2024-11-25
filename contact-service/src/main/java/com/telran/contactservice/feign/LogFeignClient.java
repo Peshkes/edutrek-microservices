@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.util.UUID;
 
 
-@FeignClient(name = "LogClient", url = "https://jsonplaceholder.typicode.com/")
+@FeignClient(name = "LogClient", url = "http://log-service:8080")
 public interface LogFeignClient {
 
     @RequestMapping(method = RequestMethod.DELETE, value = "/logs/{id}")

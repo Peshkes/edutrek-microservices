@@ -4,9 +4,7 @@ import com.telran.jwtservice.service.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -16,38 +14,38 @@ import java.util.List;
 public class JwtController {
     JwtService jwtService;
 
-    @RequestMapping("/username/{token}")
+    @GetMapping("/username/{token}")
     public String getUsername(@PathVariable String token) {
         return jwtService.getUsername(token);
     }
 
-    @RequestMapping("/roles")
+    @GetMapping("/roles")
     public List<String> getRoles(String token) {
         return jwtService.getRoles(token);
     }
 
-    @RequestMapping("/accessToken")
+    @GetMapping("/accessToken")
     public String getAccessToken(HttpServletRequest request) {
         return jwtService.getAccessToken(request);
     }
 
-    @RequestMapping("/refreshToken")
+    @GetMapping("/refreshToken")
     public String getRefreshToken(HttpServletRequest request) {
         return jwtService.getRefreshToken(request);
     }
 
-    @RequestMapping("/header")
+    @GetMapping("/header")
     public String extractTokenFromAuthorizationHeader(HttpServletRequest request) {
         return jwtService.extractTokenFromAuthorizationHeader(request);
     }
 
-    @RequestMapping("/generate/accessToken")
-    public String generateAccessToken(UserDetails userDetails) {
+    @PostMapping("/generate/accessToken")
+    public String generateAccessToken(@RequestBody UserDetails userDetails) {
         return jwtService.generateAccessToken(userDetails);
     }
 
-    @RequestMapping("/generate/refreshToken")
-    public String generateRefreshToken(UserDetails userDetails) {
+    @PostMapping("/generate/refreshToken")
+    public String generateRefreshToken(@RequestBody UserDetails userDetails) {
         return jwtService.generateRefreshToken(userDetails);
     }
 }

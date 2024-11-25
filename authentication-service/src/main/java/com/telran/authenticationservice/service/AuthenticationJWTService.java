@@ -10,10 +10,12 @@ import com.telran.authenticationservice.feign.JwtClient;
 import com.telran.authenticationservice.feign.MailingClient;
 import com.telran.authenticationservice.logging.Loggable;
 import com.telran.authenticationservice.persistence.AccountRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 public class AuthenticationJWTService extends AuthenticationAbstractService {
 
@@ -33,9 +35,14 @@ public class AuthenticationJWTService extends AuthenticationAbstractService {
         String username = authenticationDataDto.getLogin();
         UserDetails userDetails = userConfig.loadUserByUsername(username);
         if (SecurityConfig.passwordEncoder().matches(authenticationDataDto.getPassword(), userDetails.getPassword())) {
-            String accessToken = jwtClient.generateAccessToken(userDetails);
-            String refreshToken = jwtClient.generateRefreshToken(userDetails);
-            return new AuthenticationResultDto(accessToken, refreshToken);
+            try {
+                String accessToken = jwtClient.generateAccessToken(userDetails);
+                String refreshToken = jwtClient.generateRefreshToken(userDetails);
+                return new AuthenticationResultDto(accessToken, refreshToken);
+            } catch (Exception e) {
+                log.error(e.getMessage());
+                return null;
+            }
         } else
             throw new WrongPasswordException();
     }

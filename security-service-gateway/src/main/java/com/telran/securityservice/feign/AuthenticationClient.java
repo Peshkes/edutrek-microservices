@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import java.util.List;
 import java.util.UUID;
 
-@FeignClient(name = "AuthenticationClient", url = "https://jsonplaceholder.typicode.com")
+@FeignClient(name = "AuthenticationClient", url = "http://authentication-service:8080")
 public interface AuthenticationClient {
 
     @GetMapping("/id/{id}")
