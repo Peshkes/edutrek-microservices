@@ -1,9 +1,10 @@
 package com.telran.jwtservice.controller;
 
+import com.telran.jwtservice.dto.GenerateJwtRequest;
+import com.telran.jwtservice.dto.JWTBodyReturnDto;
 import com.telran.jwtservice.service.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.List;
 @RequestMapping("/jwt")
 @RequiredArgsConstructor
 public class JwtController {
-    JwtService jwtService;
+    private final JwtService jwtService;
 
     @GetMapping("/username/{token}")
     public String getUsername(@PathVariable String token) {
@@ -40,12 +41,19 @@ public class JwtController {
     }
 
     @PostMapping("/generate/accessToken")
-    public String generateAccessToken(@RequestBody UserDetails userDetails) {
-        return jwtService.generateAccessToken(userDetails);
+    public String generateAccessToken(@RequestBody GenerateJwtRequest generateJwtRequest) {
+        return jwtService.generateAccessToken(generateJwtRequest.getUsername(), generateJwtRequest.getRoles());
     }
 
     @PostMapping("/generate/refreshToken")
-    public String generateRefreshToken(@RequestBody UserDetails userDetails) {
-        return jwtService.generateRefreshToken(userDetails);
+    public String generateRefreshToken(@RequestBody String username) {
+        return jwtService.generateRefreshToken(username);
+    }
+
+    @PostMapping("/generate/all")
+    public JWTBodyReturnDto generateAll(@RequestBody GenerateJwtRequest generateJwtRequest) {
+        String accessToken = jwtService.generateAccessToken(generateJwtRequest.getUsername(), generateJwtRequest.getRoles());
+        String refreshToken = jwtService.generateRefreshToken(generateJwtRequest.getUsername());
+        return new JWTBodyReturnDto(accessToken, refreshToken);
     }
 }

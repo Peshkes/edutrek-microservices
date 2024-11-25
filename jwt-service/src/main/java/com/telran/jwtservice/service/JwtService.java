@@ -6,8 +6,6 @@ import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.KeyGenerator;
@@ -39,14 +37,14 @@ public class JwtService {
     }
 
     @Loggable
-    public String generateRefreshToken(UserDetails userDetails) {
+    public String generateRefreshToken(String username) {
         Map<String, Object> claims = new HashMap<>();
         Date issuedDate = new Date();
         Date expiredDate = new Date(issuedDate.getTime() + refreshTokenExpirationTime);
 
         return Jwts.builder()
                 .claims(claims)
-                .subject(userDetails.getUsername())
+                .subject(username)
                 .issuedAt(issuedDate)
                 .expiration(expiredDate)
                 .signWith(secretKey)
@@ -54,18 +52,16 @@ public class JwtService {
     }
 
     @Loggable
-    public String generateAccessToken(UserDetails userDetails) {
+    public String generateAccessToken(String username, List<String> roles) {
         Map<String, Object> claims = new HashMap<>();
-        List<String> roleList = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority).toList();
-        claims.put("roles", roleList);
+        claims.put("roles", roles);
 
         Date issuedDate = new Date();
         Date expiredDate = new Date(issuedDate.getTime() + accessTokenExpirationTime);
 
         return Jwts.builder()
                 .claims(claims)
-                .subject(userDetails.getUsername())
+                .subject(username)
                 .issuedAt(issuedDate)
                 .expiration(expiredDate)
                 .signWith(secretKey)

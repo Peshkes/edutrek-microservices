@@ -1,25 +1,20 @@
 package com.telran.securityservice.feign;
 
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.List;
 
-@FeignClient(name = "JwtClient", url = "http://jwt-service:8080")
+@FeignClient(name = "JwtClient", url = "http://jwt-service:8080", path = "/jwt")
 public interface JwtClient {
-    @GetMapping("/jwt/header")
+    @GetMapping("/header")
     String extractTokenFromAuthorizationHeader(@RequestHeader("Authorization") String authHeader);
 
-    @GetMapping("/jwt/username/{token}")
+    @GetMapping("/username/{token}")
     String getUsername(@PathVariable String token);
 
-    @GetMapping("/jwt/roles/{token}")
+    @GetMapping("/roles/{token}")
     List<String> getRoles(@PathVariable String token);
-
-    @PostMapping("/jwt/accessToken")
-    String generateAccessToken(@RequestBody UserDetails userDetails);
-
-    @PostMapping("/jwt/refreshToken")
-    String generateRefreshToken(@RequestBody UserDetails userDetails);
 }

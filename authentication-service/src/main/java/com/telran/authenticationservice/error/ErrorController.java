@@ -21,6 +21,11 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 public class ErrorController {
 
+    @ExceptionHandler(TokenIsNull.class)
+    ResponseEntity<String> tokenIsNullExceptionHandler(TokenIsNull e) {
+        return returnResponse(e.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(PasswordAlreadyUsedException.class)
     ResponseEntity<String> passwordAlreadyUsedExceptionHandler(PasswordAlreadyUsedException e) {
         return returnResponse(e.getMessage(), HttpStatus.CONFLICT);

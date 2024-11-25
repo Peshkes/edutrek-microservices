@@ -1,7 +1,7 @@
 package com.telran.authenticationservice.service;
 
 import com.telran.authenticationservice.dto.AuthenticationDataDto;
-import com.telran.authenticationservice.dto.AuthenticationResultDto;
+import com.telran.authenticationservice.dto.JWTBodyReturnDto;
 import com.telran.authenticationservice.feign.MailingClient;
 import com.telran.authenticationservice.logging.Loggable;
 import com.telran.authenticationservice.persistence.AccountRepository;
@@ -16,7 +16,7 @@ public class AuthenticationBaseService extends AuthenticationAbstractService {
 
     @Loggable
     @Override
-    public AuthenticationResultDto signIn(AuthenticationDataDto authenticationDataDto) {
+    public JWTBodyReturnDto signIn(AuthenticationDataDto authenticationDataDto) {
         return null;
     }
 }

@@ -7,10 +7,13 @@ import com.telran.lecturerservice.error.LecturerNotFoundException;
 import com.telran.lecturerservice.feign.GroupClient;
 import com.telran.lecturerservice.logging.Loggable;
 import com.telran.lecturerservice.persistence.*;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,18 +65,23 @@ public class LectureService {
 
     @Loggable
     @Transactional
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public BaseLecturer deleteById(UUID id) {
-        BaseLecturer lecturer = repository.findById(id).orElse(null);
-        if (lecturer != null) {
-            deleteLecturer(id, groupClient::deleteCurrentLecturersByLecturerId, repository::deleteById);
-        } else {
-            lecturer = archiveRepository.findById(id).orElse(null);
-            if (lecturer != null)
-                deleteLecturer(id, groupClient::deleteArchiveLecturersByLecturerId, archiveRepository::deleteById);
-            else
-                throw new LecturerNotFoundException(id.toString());
+        try {
+            BaseLecturer lecturer = repository.findById(id).orElse(null);
+            if (lecturer != null) {
+                deleteLecturer(id, groupClient::deleteCurrentLecturersByLecturerId, repository::deleteById);
+            } else {
+                lecturer = archiveRepository.findById(id).orElse(null);
+                if (lecturer != null)
+                    deleteLecturer(id, groupClient::deleteArchiveLecturersByLecturerId, archiveRepository::deleteById);
+                else
+                    throw new LecturerNotFoundException(id.toString());
+            }
+            return lecturer;
+        } catch (Exception e) {
+            throw new DatabaseDeletingException(e.getMessage());
         }
-        return lecturer;
     }
 
     private void deleteLecturer(UUID id, Consumer<UUID> groupClientMethod, Consumer<UUID> repositoryMethod) {

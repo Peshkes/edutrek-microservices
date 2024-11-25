@@ -3,17 +3,24 @@ package com.telran.authenticationservice.service;
 import com.telran.authenticationservice.config.SecurityConfig;
 import com.telran.authenticationservice.config.UserConfig;
 
+import com.telran.authenticationservice.dto.GenerateJwtRequest;
+import com.telran.authenticationservice.dto.JWTBodyReturnDto;
 import com.telran.authenticationservice.error.AuthenticationException.*;
 import com.telran.authenticationservice.dto.AuthenticationDataDto;
-import com.telran.authenticationservice.dto.AuthenticationResultDto;
 import com.telran.authenticationservice.feign.JwtClient;
 import com.telran.authenticationservice.feign.MailingClient;
 import com.telran.authenticationservice.logging.Loggable;
 import com.telran.authenticationservice.persistence.AccountRepository;
+import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.retry.annotation.Retryable;
+
+import java.util.List;
 
 @Slf4j
 @Service
@@ -31,39 +38,48 @@ public class AuthenticationJWTService extends AuthenticationAbstractService {
 
     @Loggable
     @Transactional
-    public AuthenticationResultDto signIn(AuthenticationDataDto authenticationDataDto) {
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
+    public JWTBodyReturnDto signIn(AuthenticationDataDto authenticationDataDto) {
         String username = authenticationDataDto.getLogin();
         UserDetails userDetails = userConfig.loadUserByUsername(username);
+        if (userDetails == null) throw new UsernameNotFoundException(username);
+
         if (SecurityConfig.passwordEncoder().matches(authenticationDataDto.getPassword(), userDetails.getPassword())) {
-            try {
-                String accessToken = jwtClient.generateAccessToken(userDetails);
-                String refreshToken = jwtClient.generateRefreshToken(userDetails);
-                return new AuthenticationResultDto(accessToken, refreshToken);
-            } catch (Exception e) {
-                log.error(e.getMessage());
-                return null;
-            }
+            JWTBodyReturnDto jwtBodyReturnDto = generateAllTokens(userDetails, username);
+            if (jwtBodyReturnDto == null || jwtBodyReturnDto.getAccessToken() == null || jwtBodyReturnDto.getRefreshToken() == null)
+                throw new TokenIsNull();
+            else
+                return jwtBodyReturnDto;
         } else
             throw new WrongPasswordException();
     }
 
     @Loggable
-    public AuthenticationResultDto refreshToken(String refreshToken) {
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
+    public JWTBodyReturnDto refreshToken(String refreshToken) {
         if (refreshToken != null) {
             String username = jwtClient.getUsername(refreshToken);
             UserDetails userDetails;
-            String accessToken;
             try {
                 userDetails = userConfig.loadUserByUsername(username);
-                accessToken = jwtClient.generateAccessToken(userDetails);
-                refreshToken = jwtClient.generateRefreshToken(userDetails);
-                return new AuthenticationResultDto(accessToken, refreshToken);
-            } catch (Exception e) {
-                throw new UsernameNotFoundException(username);
-            }
+            } catch (Exception e) {throw new UsernameNotFoundException(username);}
+            if (userDetails == null) throw new UsernameNotFoundException(username);
+
+            JWTBodyReturnDto jwtBodyReturnDto = generateAllTokens(userDetails, username);
+            if (jwtBodyReturnDto == null || jwtBodyReturnDto.getAccessToken() == null || jwtBodyReturnDto.getRefreshToken() == null)
+                throw new TokenIsNull();
+            else
+                return jwtBodyReturnDto;
+
         } else {
             throw new RefreshTokenNotFoundException();
         }
+    }
+
+    private JWTBodyReturnDto generateAllTokens(UserDetails userDetails, String username) {
+        List<String> roleList = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority).toList();
+        return jwtClient.generateAllTokens(new GenerateJwtRequest(username, roleList));
     }
 
 

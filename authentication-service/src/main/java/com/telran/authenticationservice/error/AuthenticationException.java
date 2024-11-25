@@ -75,4 +75,16 @@ public class AuthenticationException extends RuntimeException {
             super(REFRESH_TOKEN_NOT_FOUND);
         }
     }
+
+    public static class TokenIsNull extends AuthenticationException {
+        public TokenIsNull() {
+            super(TOKEN_IS_NULL);
+        }
+    }
+
+    public static class SendingEmailException extends AuthenticationException {
+        public SendingEmailException(String message) {
+            super(SENDING_MAIL + message);
+        }
+    }
 }

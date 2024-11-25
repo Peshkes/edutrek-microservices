@@ -14,11 +14,14 @@ import com.telran.groupservice.persistence.lecturers_by_group.*;
 import com.telran.groupservice.persistence.lessons_and_webinars_by_weekday.*;
 import com.telran.groupservice.persistence.students_by_group.*;
 import com.telran.groupservice.ThreeFunction;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -95,6 +98,7 @@ public class GroupService {
 
     @Loggable
     @Transactional
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(AddGroupDto groupData) {
         if (!courseClient.existsById(groupData.getCourseId()))
             throw new CourseNotFoundException(String.valueOf(groupData.getCourseId()));
@@ -110,6 +114,7 @@ public class GroupService {
 
     @Loggable
     @Transactional
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void deleteById(UUID groupId) {
         if (repository.existsById(groupId)) {
             deleteGroupData(groupId, repository, lecturersByGroupRepository, studentsByGroupRepository);
@@ -151,6 +156,7 @@ public class GroupService {
         addLecturersToGroup(changeLecturers, groupId, repository, entityConstructor);
     }
 
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     private <T extends BaseLecturerByGroup> void addLecturersToGroup(List<ChangeLecturersDto> changeLecturers, UUID groupId,
                                                                          ILecturerByGroupRepository<T> repository, ThreeFunction<UUID, UUID, Boolean, T> entityConstructor) {
         for (ChangeLecturersDto changeLecturer : changeLecturers) {
