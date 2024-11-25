@@ -1,12 +1,12 @@
 package com.telran.lecturerservice.service;
 
-import com.telran.lecturerservice.error.DatabaseException.*;
-import com.telran.lecturerservice.error.LecturerNotFoundException;
 import com.telran.lecturerservice.dto.LecturerDataDto;
 import com.telran.lecturerservice.dto.LecturerPaginationResponseDto;
+import com.telran.lecturerservice.error.DatabaseException.*;
+import com.telran.lecturerservice.error.LecturerNotFoundException;
 import com.telran.lecturerservice.feign.GroupClient;
-import com.telran.lecturerservice.persistence.*;
 import com.telran.lecturerservice.logging.Loggable;
+import com.telran.lecturerservice.persistence.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,7 +25,6 @@ public class LectureService {
 
     private final LecturerRepository repository;
     private final LecturerArchiveRepository archiveRepository;
-
     private final GroupClient groupClient;
 
     @Loggable

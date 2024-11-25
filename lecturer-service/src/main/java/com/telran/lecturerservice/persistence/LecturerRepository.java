@@ -1,6 +1,6 @@
 package com.telran.lecturerservice.persistence;
 
-import org.springframework.data.repository.query.Param;
+import feign.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
