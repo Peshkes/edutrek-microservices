@@ -7,9 +7,9 @@ import com.telran.authenticationservice.error.AuthenticationException.*;
 import com.telran.authenticationservice.dto.AuthenticationDataDto;
 import com.telran.authenticationservice.dto.AuthenticationResultDto;
 import com.telran.authenticationservice.feign.JwtClient;
+import com.telran.authenticationservice.feign.MailingClient;
 import com.telran.authenticationservice.logging.Loggable;
 import com.telran.authenticationservice.persistence.AccountRepository;
-import com.goodquestion.edutrek_server.utility_service.EmailService;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,9 +20,10 @@ public class AuthenticationJWTService extends AuthenticationAbstractService {
     private final UserConfig userConfig;
     private final JwtClient jwtClient;
 
-    public AuthenticationJWTService(AccountRepository accountRepository, EmailService emailService, UserConfig userConfig, JwtClient jwtClient) {
-        super(accountRepository, emailService);
+    public AuthenticationJWTService(AccountRepository accountRepository, MailingClient mailingClient, UserConfig userConfig, JwtClient jwtClient) {
+        super(accountRepository, mailingClient);
         this.jwtClient = jwtClient;
+        this.mailingClient = mailingClient;
         this.userConfig = userConfig;
     }
 

@@ -12,4 +12,5 @@ public interface IContactRepository<T extends AbstractContacts> extends JpaRepos
    Optional <AbstractContacts> getByContactId(UUID id);
 
    boolean existsByPhoneOrEmail( String phone, String email);
+
 }

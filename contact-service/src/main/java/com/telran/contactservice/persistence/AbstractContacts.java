@@ -1,5 +1,7 @@
 package com.telran.contactservice.persistence;
 
+
+import com.telran.contactservice.dto.AbstractStudentDto;
 import com.telran.contactservice.dto.ContactsDataDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;
@@ -32,6 +34,28 @@ public class AbstractContacts {
     @Column(name = "comment")
     private String comment;
 
+    public AbstractContacts(AbstractStudentDto abstractStudent) {
+        this.contactId = abstractStudent.getStudentId();
+        this.contactName = abstractStudent.getContactName();
+        this.phone = abstractStudent.getPhone();
+        this.email = abstractStudent.getEmail();
+        this.statusId = abstractStudent.getStatusId();
+        this.branchId = abstractStudent.getBranchId();
+        this.targetCourseId = abstractStudent.getTargetCourseId();
+        this.comment = abstractStudent.getComment();
+    }
+
+    public AbstractContacts(AbstractContacts abstractContacts) {
+        this.contactId = abstractContacts.getContactId();
+        this.contactName = abstractContacts.getContactName();
+        this.phone = abstractContacts.getPhone();
+        this.email = abstractContacts.getEmail();
+        this.statusId = abstractContacts.getStatusId();
+        this.branchId = abstractContacts.getBranchId();
+        this.targetCourseId = abstractContacts.getTargetCourseId();
+        this.comment = abstractContacts.getComment();
+    }
+
     public AbstractContacts(String contactName, String phone, String email, int statusId, int branchId, UUID targetCourseId, String comment) {
         this.contactId = UUID.randomUUID();
         this.contactName = contactName;
@@ -41,28 +65,6 @@ public class AbstractContacts {
         this.branchId = branchId;
         this.targetCourseId = targetCourseId;
         this.comment = comment;
-    }
-
-    public AbstractContacts(AbstractContacts contactEntity) {
-        this.contactId = contactEntity.getContactId();
-        this.contactName = contactEntity.getContactName();
-        this.phone = contactEntity.getPhone();
-        this.email = contactEntity.getEmail();
-        this.statusId = contactEntity.getStatusId();
-        this.branchId = contactEntity.getBranchId();
-        this.targetCourseId = contactEntity.getTargetCourseId();
-        this.comment = contactEntity.getComment();
-    }
-
-    public AbstractContacts(AbstractStudent abstractStudent) {
-        this.contactId = abstractStudent.getStudentId();
-        this.contactName = abstractStudent.getContactName();
-        this.phone = abstractStudent.getPhone();
-        this.email = abstractStudent.getEmail();
-        this.statusId = abstractStudent.getStatusId();
-        this.branchId = abstractStudent.getBranchId();
-        this.targetCourseId = abstractStudent.getTargetCourseId();
-        this.comment = abstractStudent.getComment();
     }
 
     public AbstractContacts(ContactsDataDto contactsDataDto) {
@@ -75,4 +77,5 @@ public class AbstractContacts {
         this.targetCourseId = contactsDataDto.getTargetCourseId();
         this.comment = contactsDataDto.getComment();
     }
+
 }

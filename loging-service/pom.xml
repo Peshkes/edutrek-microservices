@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.tel-ran</groupId>
-    <artifactId>logining-service</artifactId>
+    <artifactId>loging-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>logining-service</name>
     <description>logining-service</description>

@@ -62,20 +62,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-config</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream-test-binder</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -110,7 +97,7 @@
         <module>student-service</module>
 
         <module>mailing-service</module>
-        <module>logining-service</module>
+        <module>loging-service</module>
         <module>security-service-gateway</module>
         <module>jwt-service</module>
     </modules>

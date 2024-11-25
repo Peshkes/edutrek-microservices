@@ -1,11 +1,11 @@
 package com.telran.contactservice.controller;
 
 
-import com.goodquestion.edutrek_server.modules.contacts.dto.ContactSearchDto;
-import com.goodquestion.edutrek_server.modules.contacts.dto.ContactsDataDto;
-import com.goodquestion.edutrek_server.modules.contacts.persistence.AbstractContacts;
-import com.goodquestion.edutrek_server.modules.contacts.service.ContactsService;
-import com.goodquestion.edutrek_server.modules.students.dto.StudentsFromContactDataDto;
+import com.telran.contactservice.dto.ContactSearchDto;
+import com.telran.contactservice.dto.ContactsDataDto;
+import com.telran.contactservice.dto.StudentsFromContactDataDto;
+import com.telran.contactservice.persistence.AbstractContacts;
+import com.telran.contactservice.service.ContactsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -40,6 +40,12 @@ public class ContactsController {
     @ResponseStatus(HttpStatus.OK)
     public AbstractContacts getById(@PathVariable UUID id) {
         return contactsService.getById(id);
+    }
+
+    @GetMapping("/exists/{phone}/{email}")
+    @ResponseStatus(HttpStatus.OK)
+    public AbstractContacts findByPhoneOrEmail(@PathVariable String phone, @PathVariable String email) {
+        return contactsService.findByPhoneOrEmail(phone, email);
     }
 
     @PostMapping("")

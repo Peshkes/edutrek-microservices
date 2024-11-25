@@ -18,10 +18,4 @@ public class DatabaseException extends RuntimeException {
             super(DELETING + message);
         }
     }
-
-    public static class DatabaseUpdatingException extends DatabaseException {
-        public DatabaseUpdatingException(String message) {
-            super(UPDATING + message);
-        }
-    }
 }
