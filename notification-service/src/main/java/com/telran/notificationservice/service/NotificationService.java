@@ -31,10 +31,6 @@ public class NotificationService {
     private final NotificationsRepository repository;
     private final SseService sseService;
 
-//    @Loggable
-//    public List<NotificationDocument> getAllEntityNotifications(UUID id) {
-//       return repository.findAllNotificationsById(id);
-//    }
 
     @Loggable
     public NotificationDocument getById(UUID id) {
@@ -49,8 +45,12 @@ public class NotificationService {
         NotificationDataDto notificationDataDto;
         if (notification != null) {
             List<NotificationDataDto> notificationsList = notification.getNotificationData();
-            notificationDataDto = new NotificationDataDto(notificationsList.getLast().getNotificationId() + 1, notificationDto);
-            notificationsList.add(notificationDataDto);
+            if(!notificationsList.isEmpty()) {
+                notificationDataDto = new NotificationDataDto(notificationsList.get(notificationsList.size()-1).getNotificationId() + 1, notificationDto);
+                notificationsList.add(notificationDataDto);
+            }else{
+                throw new NotificationListIsEmptyException(entityId);
+            }
         } else {
             List<NotificationDataDto> newList = new ArrayList<>();
             System.out.println(notificationDto);

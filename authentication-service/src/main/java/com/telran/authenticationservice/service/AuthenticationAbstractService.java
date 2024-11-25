@@ -6,10 +6,10 @@ import com.telran.authenticationservice.error.DatabaseException.DatabaseAddingEx
 import com.telran.authenticationservice.error.DatabaseException.DatabaseDeletingException;
 import com.telran.authenticationservice.error.DatabaseException.DatabaseUpdatingException;
 import com.telran.authenticationservice.dto.*;
+import com.telran.authenticationservice.feign.MailingClient;
 import com.telran.authenticationservice.logging.Loggable;
 import com.telran.authenticationservice.persistence.AccountDocument;
 import com.telran.authenticationservice.persistence.AccountRepository;
-import com.goodquestion.edutrek_server.utility_service.EmailService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import com.telran.authenticationservice.error.AuthenticationException.UsernameNotFoundException;
@@ -24,10 +24,10 @@ import java.util.stream.Collectors;
 public abstract class AuthenticationAbstractService {
 
     protected AccountRepository accountRepository;
-    protected EmailService emailService;
+    protected MailingClient mailingClient;
 
-    public AuthenticationAbstractService(AccountRepository accountRepository, EmailService emailService) {
-        this.emailService = emailService;
+    public AuthenticationAbstractService(AccountRepository accountRepository, MailingClient mailingClient) {
+        this.mailingClient = mailingClient;
         this.accountRepository = accountRepository;
     }
 
@@ -69,7 +69,7 @@ public abstract class AuthenticationAbstractService {
             throw new DatabaseAddingException(e.getMessage());
         }
         try {
-            emailService.sendRegistrationEmail(email, login, password);
+            mailingClient.sendRegistrationEmail(new RegistrationEmailDto(email, login, password));
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
