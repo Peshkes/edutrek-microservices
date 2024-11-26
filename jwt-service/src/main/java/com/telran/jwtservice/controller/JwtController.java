@@ -20,8 +20,8 @@ public class JwtController {
         return jwtService.getUsername(token);
     }
 
-    @GetMapping("/roles")
-    public List<String> getRoles(String token) {
+    @GetMapping("/roles/{token}")
+    public List<String> getRoles(@PathVariable String token) {
         return jwtService.getRoles(token);
     }
 
