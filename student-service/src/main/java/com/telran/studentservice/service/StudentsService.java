@@ -14,11 +14,14 @@ import com.telran.studentservice.persistence.archive.StudentsArchiveEntity;
 import com.telran.studentservice.persistence.archive.StudentsArchiveRepository;
 import com.telran.studentservice.persistence.current.StudentEntity;
 import com.telran.studentservice.persistence.current.StudentsRepository;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,19 +45,17 @@ public class StudentsService {
     private final PaymentsFeignClient paymentsFeignClient;
 
     @Loggable
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public StudentSearchDto getAll(int page, int pageSize, String search, Integer statusId, UUID groupId, UUID courseId) {
         String statusName = statusId == null ? null : statusFeignClient.getStatusById(statusId).getStatusName();
         Pageable pageable = PageRequest.of(page, pageSize);
         List<AbstractStudent> foundStudents;
         if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
-            FoundEntitiesDto foundEntitiesDto = findStudents(pageable, search, statusId, groupId, courseId, false);
-            foundStudents = foundEntitiesDto.getFoundStudents();
+            foundStudents = findStudents( pageable, search, statusId, groupId, courseId, false);
         } else {
-            FoundEntitiesDto foundStudentEntities = findStudents(pageable, search, statusId, groupId, courseId, true);
-            foundStudents = foundStudentEntities.getFoundStudents();
+            foundStudents = findStudents(pageable, search, statusId, groupId, courseId, true);
             if (foundStudents.size() < pageSize) {
-                FoundEntitiesDto foundStudentArchiveEntities = findStudents(PageRequest.of(page, pageSize - foundStudents.size()), search, statusId, groupId, courseId, false);
-                List<AbstractStudent> foundStudentsArchive = foundStudentArchiveEntities.getFoundStudents();
+                List<AbstractStudent> foundStudentsArchive = findStudents(PageRequest.of(page, pageSize - foundStudents.size()), search, statusId, groupId, courseId, false);
                 if (!foundStudentsArchive.isEmpty())
                     foundStudents.addAll(foundStudentsArchive);
             }
@@ -74,6 +75,7 @@ public class StudentsService {
 
     @Loggable
     @Transactional
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(StudentsDataDto studentData) {
         checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
         if (!repository.existsByPhoneOrEmail(studentData.getPhone(), studentData.getEmail())) {
@@ -90,6 +92,7 @@ public class StudentsService {
 
     @Loggable
     @Transactional
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void deleteById(UUID id) {
         if (!repository.existsById(id)) throw new StudentNotFoundException(id.toString());
         logFeignClient.deleteById(id);
@@ -102,6 +105,7 @@ public class StudentsService {
 
     @Loggable
     @Transactional
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void updateById(UUID id, StudentsDataDto studentData) {
         checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
         AbstractStudent entity = repository.getByStudentId(id).or(() -> archiveRepository.findById(id)).orElseThrow(() -> new StudentNotFoundException(id.toString()));
@@ -123,6 +127,7 @@ public class StudentsService {
 
     @Loggable
     @Transactional
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void moveToArchiveById(UUID id, String reason) {
         StudentEntity student = repository.findById(id).orElseThrow(() -> new StudentNotFoundException(id.toString()));
         int statusId = statusFeignClient.findStatusEntityByStatusName("Archive").getStatusId();
@@ -150,6 +155,7 @@ public class StudentsService {
     }
 
     @Loggable
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     private void checkStatusCourseBranch(int branchId, UUID targetCourseId, int statusId) {
         if (!branchFeignClient.existsById(branchId))
             throw new BranchNotFoundException(String.valueOf(branchId));
@@ -161,9 +167,9 @@ public class StudentsService {
 
     @Loggable
     @SuppressWarnings("unchecked")
-    public <S extends AbstractStudent> FoundEntitiesDto findStudents(Pageable pageable, String search, Integer statusId, UUID group_id, UUID courseId, boolean isCurrentRepository) {
+    public <S extends AbstractStudent> List<AbstractStudent> findStudents(Pageable pageable, String search, Integer statusId, UUID group_id, UUID courseId, boolean isCurrentRepository) {
         Specification<S> studentSpecs = getStudentSpecifications(search, statusId, group_id, courseId);
         Page<? extends AbstractStudent> pageContactEntity = isCurrentRepository? repository.findAll((Specification<StudentEntity>) studentSpecs, pageable): archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs, pageable);
-        return new FoundEntitiesDto(null, (List<AbstractStudent>) pageContactEntity.getContent());
+        return (List<AbstractStudent>) pageContactEntity.getContent();
     }
 }

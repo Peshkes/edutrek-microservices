@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.UUID;
 
-@FeignClient(name = "AuthenticationClient", url = "http://authentication-service:8080", path = "/auth")
+@FeignClient(name = "AuthenticationClient", url = "http://authentication-service:8080", path = "/secret")
 public interface AuthenticationClient {
     @GetMapping("/id/{id}")
     AccountDocumentDto findById(@PathVariable("id") UUID id);

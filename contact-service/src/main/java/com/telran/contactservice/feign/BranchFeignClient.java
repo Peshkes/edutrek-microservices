@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 
-@FeignClient(name = "BranchClient", url = "http://branche-service:8080")
+@FeignClient(name = "BranchClient", url = "http://branch-service:8080")
 public interface BranchFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/branches/exists/{id}")
