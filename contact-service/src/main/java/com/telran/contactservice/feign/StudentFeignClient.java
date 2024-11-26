@@ -1,6 +1,7 @@
 package com.telran.contactservice.feign;
 
 
+import com.telran.contactservice.config.FeignConfig;
 import com.telran.contactservice.dto.*;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.util.UUID;
 
 
-@FeignClient(name = "StudentClient", url = "http://student-service:8080")
+@FeignClient(name = "StudentClient", url = "http://student-service:8080", configuration = FeignConfig.class)
 public interface StudentFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/students/exists/{id}")

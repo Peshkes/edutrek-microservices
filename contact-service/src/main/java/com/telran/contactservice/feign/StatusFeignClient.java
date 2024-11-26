@@ -1,6 +1,7 @@
 package com.telran.contactservice.feign;
 
 
+import com.telran.contactservice.config.FeignConfig;
 import com.telran.contactservice.dto.StatusDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -8,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 
-@FeignClient(name = "StatusesClient", url = "http://status-service:8080")
+@FeignClient(name = "StatusesClient", url = "http://status-service:8080", configuration = FeignConfig.class)
 public interface StatusFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/statuses/{id}")

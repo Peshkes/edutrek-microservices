@@ -1,5 +1,6 @@
 package com.telran.authenticationservice.feign;
 
+import com.telran.authenticationservice.config.FeignConfig;
 import com.telran.authenticationservice.dto.GenerateJwtRequest;
 import com.telran.authenticationservice.dto.JWTBodyReturnDto;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -7,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@FeignClient(name = "JwtClient", url = "http://jwt-service:8080", path = "/jwt")
+@FeignClient(name = "JwtClient", url = "http://jwt-service:8080", path = "/jwt", configuration = FeignConfig.class)
 public interface JwtClient {
     @GetMapping("/header")
     String extractTokenFromAuthorizationHeader(@RequestHeader("Authorization") String authHeader);
