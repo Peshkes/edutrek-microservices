@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.util.UUID;
 
 
-@FeignClient(name = "StudentsClient", url = "https://jsonplaceholder.typicode.com/")
+@FeignClient(name = "StudentsClient", url = "http://student-service:8080")
 public interface StudentsFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/students/exists/{id}")

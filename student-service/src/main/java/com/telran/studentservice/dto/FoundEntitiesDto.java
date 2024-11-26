@@ -11,16 +11,10 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class FoundEntitiesDto {
-    private List<AbstractContactsDto> foundContacts;
     private List<AbstractStudent> foundStudents;
-
-    public List<AbstractContactsDto> getFoundContacts() {
-        return new ArrayList<>(foundContacts);
-    }
 
     public List<AbstractStudent> getFoundStudents() {
         return new ArrayList<>(foundStudents);
     }
-
 
 }

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import java.util.List;
 import java.util.UUID;
 
 
@@ -25,8 +26,8 @@ public interface StudentFeignClient {
     AbstractStudentDto promoteContactToStudentById(@PathVariable UUID id, StudentsFromContactDataDto data);
 
     @RequestMapping(method = RequestMethod.POST, value = "/students/find_students")
-    FoundEntitiesDto findStudents(@RequestBody FindStudentsDto data);
+    List<AbstractStudentDto> findStudents(@RequestBody FindStudentsDto data);
 
     @RequestMapping(method = RequestMethod.POST, value = "")
-    AbstractStudentDto save(@RequestBody StudentsDataDto data);
+    AbstractStudentDto save(@PathVariable StudentsDataDto data);
 }

@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -50,7 +51,7 @@ public class StudentsController {
 
     @PostMapping("/find_students")
     @ResponseStatus(HttpStatus.OK)
-    public FoundEntitiesDto findStudents(@RequestBody FindStudentsDto findStudentsDto) {
+    public List<AbstractStudent> findStudents(@RequestBody FindStudentsDto findStudentsDto) {
         return studentService.findStudents(findStudentsDto.getPageable(),findStudentsDto.getSearch(), findStudentsDto.getStatusId(), findStudentsDto.getGroup_id(), findStudentsDto.getCourseId(),findStudentsDto.isCurrentRepository());
     }
 

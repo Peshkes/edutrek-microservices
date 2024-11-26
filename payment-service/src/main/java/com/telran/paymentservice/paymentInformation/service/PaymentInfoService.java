@@ -13,6 +13,7 @@ import com.telran.paymentservice.paymentInformation.persistence.archive.PaymentI
 import com.telran.paymentservice.paymentInformation.persistence.archive.PaymentInfoArchiveRepository;
 import com.telran.paymentservice.paymentInformation.persistence.current.PaymentInfoEntity;
 import com.telran.paymentservice.paymentInformation.persistence.current.PaymentInfoRepository;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
@@ -21,6 +22,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,6 +67,7 @@ public class PaymentInfoService {
     @Loggable
     @Transactional
     @CacheEvict(key = "{'getAll'}")
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(PaymentInfoDataDto paymentInfoDtoData) {
         if (!studentsFeignClient.existsById(paymentInfoDtoData.getStudentId())) {
             throw new StudentNotFoundException(String.valueOf(paymentInfoDtoData.getStudentId()));
