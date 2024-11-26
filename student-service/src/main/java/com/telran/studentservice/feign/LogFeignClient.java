@@ -1,5 +1,6 @@
 package com.telran.studentservice.feign;
 
+import com.telran.studentservice.config.FeignConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -8,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.util.UUID;
 
 
-@FeignClient(name = "LogClient", url = "http://log-service:8080")
+@FeignClient(name = "LogClient", url = "http://log-service:8080", configuration = FeignConfig.class)
 public interface LogFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/logs/{id}")
