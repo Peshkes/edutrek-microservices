@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-
+import static com.telran.notificationservice.error.Exceptions.*;
 
 
 @Slf4j
@@ -18,8 +18,13 @@ public class ErrorController {
         return returnResponse(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @ExceptionHandler(ShareException.NotificationNotFoundException.class)
-    ResponseEntity<String> notificationNotFoundException(ShareException.NotificationNotFoundException e) {
+    @ExceptionHandler(NotificationNotFoundException.class)
+    ResponseEntity<String> notificationNotFoundException(NotificationNotFoundException e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(WrongEntityTypeException.class)
+    ResponseEntity<String> wrongEntityTypeException(WrongEntityTypeException e) {
         return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 

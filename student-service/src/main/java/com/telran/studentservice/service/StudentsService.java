@@ -35,6 +35,7 @@ import static com.telran.studentservice.persistence.StudentsFilterSpecifications
 
 public class StudentsService {
 
+    private static final boolean IS_CURRENT_REPOSITORY = true;
     private final StudentsRepository repository;
     private final ContactFeignClient contactFeignClient;
     private final StudentsArchiveRepository archiveRepository;
@@ -43,6 +44,7 @@ public class StudentsService {
     private final BranchFeignClient branchFeignClient;
     private final CourseFeignClient courseFeignClient;
     private final PaymentsFeignClient paymentsFeignClient;
+    private final GroupFeignClient groupFeignClient;
 
     @Loggable
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
@@ -51,7 +53,7 @@ public class StudentsService {
         Pageable pageable = PageRequest.of(page, pageSize);
         List<AbstractStudent> foundStudents;
         if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
-            foundStudents = findStudents( pageable, search, statusId, groupId, courseId, false);
+            foundStudents = findStudents(pageable, search, statusId, groupId, courseId, false);
         } else {
             foundStudents = findStudents(pageable, search, statusId, groupId, courseId, true);
             if (foundStudents.size() < pageSize) {
@@ -80,13 +82,9 @@ public class StudentsService {
         checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
         if (!repository.existsByPhoneOrEmail(studentData.getPhone(), studentData.getEmail())) {
             int statusId = statusFeignClient.findStatusEntityByStatusName("Student").getStatusId();
-            AbstractContactsDto contact = contactFeignClient.findByPhoneOrEmail(studentData.getPhone(), studentData.getEmail());
-            if (contact == null) {
-                repository.save(new StudentEntity(
-                        studentData, statusId));
-            } else {
-                contactFeignClient.promoteContactToStudentById(contact.getContactId(), new StudentsFromContactDataDto(studentData.getFullPayment(), studentData.isDocumentsDone()));
-            }
+            repository.save(new StudentEntity(
+                    studentData, statusId));
+            contactFeignClient.findByPhoneOrEmailAndDelete(studentData.getPhone(), studentData.getEmail());
         }
     }
 
@@ -94,13 +92,28 @@ public class StudentsService {
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void deleteById(UUID id) {
-        if (!repository.existsById(id)) throw new StudentNotFoundException(id.toString());
-        logFeignClient.deleteById(id);
-        try {
-            repository.deleteById(id);
-        } catch (Exception e) {
-            throw new DatabaseDeletingException(e.getMessage());
+        if (!repository.existsById(id)) {
+            if (!archiveRepository.existsById(id)) {
+                throw new StudentNotFoundException(id.toString());
+            } else {
+                try {
+                    groupFeignClient.deleteByStudentId(id, !IS_CURRENT_REPOSITORY);
+                    paymentsFeignClient.deletePaymentByStudentId(id);
+                    archiveRepository.deleteById(id);
+                } catch (Exception e) {
+                    throw new DatabaseDeletingException(e.getMessage());
+                }
+            }
+        } else {
+            try {
+                groupFeignClient.deleteByStudentId(id, IS_CURRENT_REPOSITORY);
+                paymentsFeignClient.deletePaymentByStudentId(id);
+                repository.deleteById(id);
+            } catch (Exception e) {
+                throw new DatabaseDeletingException(e.getMessage());
+            }
         }
+        logFeignClient.deleteById(id);
     }
 
     @Loggable
@@ -134,9 +147,9 @@ public class StudentsService {
         student.setStatusId(statusId);
         StudentsArchiveEntity studentArchEntity = new StudentsArchiveEntity(student, reason);
         try {
-            List<AbstractPaymentInformationDto> payments = paymentsFeignClient.getPaymentByStudentId(id).paymentsInfo();
             archiveRepository.save(studentArchEntity);
-            payments.forEach(p -> paymentsFeignClient.moveToArchiveById(p.getPaymentId()));
+            paymentsFeignClient.moveToArchiveById(id);
+            groupFeignClient.archiveStudents(id);
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
@@ -145,7 +158,6 @@ public class StudentsService {
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }
-
     }
 
     @Loggable
@@ -169,7 +181,15 @@ public class StudentsService {
     @SuppressWarnings("unchecked")
     public <S extends AbstractStudent> List<AbstractStudent> findStudents(Pageable pageable, String search, Integer statusId, UUID group_id, UUID courseId, boolean isCurrentRepository) {
         Specification<S> studentSpecs = getStudentSpecifications(search, statusId, group_id, courseId);
-        Page<? extends AbstractStudent> pageContactEntity = isCurrentRepository? repository.findAll((Specification<StudentEntity>) studentSpecs, pageable): archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs, pageable);
+        Page<? extends AbstractStudent> pageContactEntity = isCurrentRepository ? repository.findAll((Specification<StudentEntity>) studentSpecs, pageable) : archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs, pageable);
         return (List<AbstractStudent>) pageContactEntity.getContent();
+    }
+
+    public AbstractStudent findByPhoneOrEmailAndDelete(String phone, String email) {
+        try {
+            return repository.deleteByPhoneOrEmail(phone, email);
+        } catch (Exception e) {
+            throw new DatabaseDeletingException(e.getMessage());
+        }
     }
 }

@@ -21,7 +21,6 @@ public class PaymentInfoController {
     private final PaymentInfoService paymentInfoService;
 
 
-
     @GetMapping("/paymentid/{id}")
     @ResponseStatus(HttpStatus.OK)
     public AbstractPaymentInformation getByPaymentId(@PathVariable UUID id) {
@@ -34,11 +33,20 @@ public class PaymentInfoController {
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "pagesize", defaultValue = "10") int pageSize,
             @PathVariable UUID id) {
-        return paymentInfoService.getByStudentId(page,pageSize,id);
+        return paymentInfoService.getByStudentId(page, pageSize, id);
+    }
+
+    @GetMapping("/studentid/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public void deleteByStudentId(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "pagesize", defaultValue = "10") int pageSize,
+            @PathVariable UUID id) {
+        paymentInfoService.deleteByStudentId(page, pageSize, id);
     }
 
     @PostMapping("")
-    public ResponseEntity<String> addNewCourse(@RequestBody @                                                                       Valid PaymentInfoDataDto paymentInfoData) {
+    public ResponseEntity<String> addNewCourse(@RequestBody @Valid PaymentInfoDataDto paymentInfoData) {
         paymentInfoService.addEntity(paymentInfoData);
         return new ResponseEntity<>("Payment info created", HttpStatus.CREATED);
     }

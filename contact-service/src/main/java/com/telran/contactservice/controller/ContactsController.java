@@ -28,7 +28,7 @@ public class ContactsController {
     @ResponseStatus(HttpStatus.OK)
     public ContactSearchDto getAll(
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "pagesize",defaultValue = "10") int pageSize,
+            @RequestParam(name = "pagesize", defaultValue = "10") int pageSize,
             @RequestParam(name = "search", required = false) String search,
             @RequestParam(name = "statusid", required = false) Integer statusId,
             @RequestParam(name = "targetcourseid", required = false) UUID courseId
@@ -46,6 +46,12 @@ public class ContactsController {
     @ResponseStatus(HttpStatus.OK)
     public AbstractContacts findByPhoneOrEmail(@PathVariable String phone, @PathVariable String email) {
         return contactsService.findByPhoneOrEmail(phone, email);
+    }
+
+    @GetMapping("/find/{phone}/{email}")
+    @ResponseStatus(HttpStatus.OK)
+    public AbstractContacts findByPhoneOrEmailAndDelete(@PathVariable String phone, @PathVariable String email) {
+        return contactsService.findByPhoneOrEmailAndDelete(phone, email);
     }
 
     @PostMapping("")
@@ -67,20 +73,16 @@ public class ContactsController {
     }
 
     @PutMapping("/archive/{id}/{reason}")
-    public ResponseEntity<String> moveToArchiveById(@PathVariable UUID id,@PathVariable @DefaultValue("") String reason) {
-        contactsService.moveToArchiveById(id,reason);
+    public ResponseEntity<String> moveToArchiveById(@PathVariable UUID id, @PathVariable @DefaultValue("") String reason) {
+        contactsService.moveToArchiveById(id, reason);
         return new ResponseEntity<>("Contact moved to archive", HttpStatus.OK);
     }
 
     @PostMapping("/promote/{id}")
-    public ResponseEntity<String> promoteContactToStudentById(@PathVariable UUID id,@RequestBody @Valid StudentsFromContactDataDto studentData) {
-        contactsService.promoteContactToStudentById(id,studentData);
+    public ResponseEntity<String> promoteContactToStudentById(@PathVariable UUID id, @RequestBody @Valid StudentsFromContactDataDto studentData) {
+        contactsService.promoteContactToStudentById(id, studentData);
         return new ResponseEntity<>("Contact promoted to student", HttpStatus.OK);
     }
-
-
-
-
 
 
 }

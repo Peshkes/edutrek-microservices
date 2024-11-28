@@ -64,6 +64,13 @@ public class PaymentInfoService {
         return new PaymentsInfoSearchDto(foundPayments, page, pageSize, foundPayments.size());
     }
 
+    @Transactional
+    public void deleteByStudentId(int page, int pageSize, UUID studentId) {
+        List<AbstractPaymentInformation> payments = getByStudentId(page,pageSize,studentId).paymentsInfo();
+        payments.forEach(p -> movePaymentsToArchive(p.getPaymentId()));
+    }
+
+
     @Loggable
     @Transactional
     @CacheEvict(key = "{'getAll'}")

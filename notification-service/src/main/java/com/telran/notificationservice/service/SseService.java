@@ -1,8 +1,8 @@
-package com.telran.notificationservice;
+package com.telran.notificationservice.service;
 
 
 import com.telran.notificationservice.dto.NotificationDataDto;
-import com.telran.notificationservice.persistence.NotificationsRepository;
+import com.telran.notificationservice.persistence.contact_notifications.ContactNotificationsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -14,7 +14,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class SseService {
-    private final NotificationsRepository notificationsRepository;
+    private final ContactNotificationsRepository notificationsRepository;
     private final Map<UUID, SseEmitter> clients = new HashMap<>();
 
 

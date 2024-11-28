@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface NotificationsRepository extends MongoRepository<NotificationDocument, UUID> {
+public interface INotificationsRepository<T extends AbstractNotificationDocument> extends MongoRepository<T, UUID> {
 
 
     @Query("{ '_id': ?0}")

@@ -3,14 +3,18 @@ package com.telran.notificationservice.controller;
 import com.telran.notificationservice.dto.DeleteNotificationDto;
 import com.telran.notificationservice.dto.NotificationDataDto;
 import com.telran.notificationservice.dto.NotificationDto;
-import com.telran.notificationservice.persistence.NotificationDocument;
+import com.telran.notificationservice.persistence.AbstractNotificationDocument;
+import com.telran.notificationservice.persistence.EntityTypes;
 import com.telran.notificationservice.service.NotificationService;
+import com.telran.notificationservice.service.SseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
 import java.util.UUID;
 
 
@@ -21,6 +25,7 @@ import java.util.UUID;
 public class NotificationController {
 
     private final NotificationService service;
+    private final SseService sseService;
 
 //    @GetMapping("/all/{id}")
 //    @ResponseStatus(HttpStatus.OK)
@@ -28,29 +33,39 @@ public class NotificationController {
 //        return service.getAllEntityNotifications(id);
 //    }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{entityType}/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public NotificationDocument getById(@PathVariable UUID id) {
-        return service.getById(id);
+    public AbstractNotificationDocument getById(@PathVariable UUID id, @PathVariable String entityType) {
+        return service.getById(id, entityType);
     }
 
-    @PostMapping("/{entityId}")
+    @GetMapping("/entityTypes")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<String> addNotificationToId(@PathVariable UUID entityId, @RequestBody @Valid NotificationDto notificationDto) {
-       service.addNotificationToId(entityId, notificationDto);
-       return new ResponseEntity<>("Notification created", HttpStatus.CREATED);
+    public EntityTypes[] getEntityTypes() {
+        return service.getEntityTypes();
     }
 
-    @DeleteMapping("")
-    public ResponseEntity<String> deleteById( @RequestBody @Valid DeleteNotificationDto deleteNotificationDto) {
-        service.deleteNotificationById(deleteNotificationDto.getEntityId(), deleteNotificationDto.getNotificationId());
+    @PostMapping("/{entityType}/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<String> addNotificationToEntity(@PathVariable UUID id,@PathVariable String entityType, @RequestBody @Valid NotificationDto notificationDto) {
+       service.addNotificationToId(id, notificationDto, entityType);
+       return new ResponseEntity<>("Notification for " + entityType + ": " + id + " created", HttpStatus.CREATED);
+    }
+
+    @DeleteMapping("/{entityType}")
+    public ResponseEntity<String> deleteById( @RequestBody @Valid DeleteNotificationDto deleteNotificationDto, @PathVariable String entityType) {
+        service.deleteNotificationById(deleteNotificationDto.getEntityId(), deleteNotificationDto.getNotificationId(), entityType);
         return new ResponseEntity<>("Notification deleted", HttpStatus.OK);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<String> updateById(@PathVariable UUID id, @RequestBody @Valid NotificationDataDto notificationDataDto) {
-        service.updateById(id, notificationDataDto);
+    @PutMapping("/{entityType}/{id}")
+    public ResponseEntity<String> updateById(@PathVariable UUID id,@PathVariable String entityType, @RequestBody @Valid NotificationDataDto notificationDataDto) {
+        service.updateById(id, notificationDataDto, entityType);
         return new ResponseEntity<>("Contact updated", HttpStatus.OK);
     }
 
+    @GetMapping("/subscribe/{clientId}")
+    public SseEmitter subscribe(@PathVariable java.util.UUID clientId) {
+        return sseService.subscribe(clientId);
+    }
 }
