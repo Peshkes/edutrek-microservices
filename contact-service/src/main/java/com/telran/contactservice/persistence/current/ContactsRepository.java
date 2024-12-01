@@ -1,6 +1,7 @@
 package com.telran.contactservice.persistence.current;
 
 
+import com.telran.contactservice.persistence.AbstractContacts;
 import com.telran.contactservice.persistence.IContactRepository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;

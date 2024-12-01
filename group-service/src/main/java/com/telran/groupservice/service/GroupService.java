@@ -100,8 +100,7 @@ public class GroupService {
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(AddGroupDto groupData) {
-        if (!courseClient.existsById(groupData.getCourseId()))
-            throw new CourseNotFoundException(String.valueOf(groupData.getCourseId()));
+        if (!courseClient.existsById(groupData.getCourseId())) throw new CourseNotFoundException(String.valueOf(groupData.getCourseId()));
         try {
             UUID groupId = repository.save(constructEntity(groupData)).getGroupId();
             addSmthByWeekdays(groupData.getLessons(), groupId, lessonsByWeekdayRepository, LessonsByWeekdayEntity::new);
@@ -273,6 +272,7 @@ public class GroupService {
             groupEntity.setIsActive(false);
             for (StudentsByGroupEntity student : studentsByGroupRepository.getByGroupId(uuid)) {
                 student.setIsActive(false);
+                studentsByGroupArchiveRepository.save(new StudentsByGroupArchiveEntity(student));
             }
             for (LecturersByGroupEntity lecturer : lecturersByGroupRepository.getByGroupId(uuid))
                 lecturersByGroupArchiveRepository.save(new LecturersByGroupArchiveEntity(lecturer));

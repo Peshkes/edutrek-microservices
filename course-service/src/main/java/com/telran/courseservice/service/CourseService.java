@@ -7,10 +7,7 @@ import com.telran.courseservice.logging.Loggable;
 import com.telran.courseservice.persistence.CourseEntity;
 import com.telran.courseservice.persistence.CourseRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheConfig;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +22,13 @@ public class CourseService {
     private final CourseRepository repository;
 
     @Loggable
-    @Cacheable(key = "#root.methodName")
+    @Cacheable(key = "{'getALl'}")
     public List<CourseEntity> getAll() {
         return repository.findAll();
     }
 
     @Loggable
+    @Cacheable(key = "#courseId")
     public CourseEntity getById(UUID courseId) {
         return repository.findById(courseId).orElseThrow(() -> new CourseNotFoundException(String.valueOf(courseId)));
     }
@@ -48,7 +46,11 @@ public class CourseService {
 
     @Loggable
     @Transactional
-    @CachePut(key = "#id")
+    @Caching(evict = {
+            @CacheEvict(key = "#id"),
+            @CacheEvict(key = "'exist:' + #id"),
+            @CacheEvict(key = "'getAll'")
+    })
     public void deleteById(UUID id) {
         if (!repository.existsById(id))
             throw new CourseNotFoundException(String.valueOf(id));
@@ -62,7 +64,11 @@ public class CourseService {
 
     @Loggable
     @Transactional
-    @CachePut(key = "#id")
+    @Caching(evict = {
+            @CacheEvict(key = "#id"),
+            @CacheEvict(key = "'exist:' + #id"),
+            @CacheEvict(key = "'getAll'")
+    })
     public void updateById(UUID id, CourseDataDto courseData) {
         CourseEntity courseEntity = repository.findById(id).orElseThrow(() -> new CourseNotFoundException(String.valueOf(id)));
 
@@ -76,6 +82,7 @@ public class CourseService {
     }
 
     @Loggable
+    @Cacheable(key = "'exist:' + #id")
     public boolean existsById(UUID id) {
         return repository.existsById(id);
     }
