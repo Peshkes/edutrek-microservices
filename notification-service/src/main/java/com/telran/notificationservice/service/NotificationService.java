@@ -35,9 +35,8 @@ public class NotificationService {
 
 
     @Loggable
-    public AbstractNotificationDocument getById(UUID id, String entityType) {
+    public AbstractNotificationDocument getById(UUID id, EntityTypes entityType) {
         INotificationsRepository<? extends AbstractNotificationDocument> repository = chooseRepository(entityType);
-        if (repository == null) throw new WrongEntityTypeException(entityType);
         return repository.findById(id).orElseThrow(() -> new NotificationNotFoundException(id.toString()));
     }
 
@@ -47,22 +46,21 @@ public class NotificationService {
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends AbstractNotificationDocument> INotificationsRepository<T> chooseRepository(String entityType) {
+    private <T extends AbstractNotificationDocument> INotificationsRepository<T> chooseRepository(EntityTypes entityType) {
         return switch (entityType) {
-            case "contact" -> (INotificationsRepository<T>) contactNotificationsRepository;
-            case "student" -> (INotificationsRepository<T>) studentNotificationsRepository;
-            case "group" -> (INotificationsRepository<T>) groupNotificationsRepository;
-            case "lecturer" -> (INotificationsRepository<T>) lecturerNotificationsRepository;
-            default -> null;
+            case CONTACT-> (INotificationsRepository<T>) contactNotificationsRepository;
+            case STUDENT -> (INotificationsRepository<T>) studentNotificationsRepository;
+            case GROUP -> (INotificationsRepository<T>) groupNotificationsRepository;
+            case LECTURER -> (INotificationsRepository<T>) lecturerNotificationsRepository;
+         //   default -> throw new WrongEntityTypeException(entityType);
         };
     }
 
     @Loggable
     @Transactional
     @SuppressWarnings("unchecked")
-    public <T extends AbstractNotificationDocument> void addNotificationToId(UUID entityId, NotificationDto notificationDto, String entityType) {
+    public <T extends AbstractNotificationDocument> void addNotificationToId(UUID entityId, NotificationDto notificationDto, EntityTypes entityType) {
         INotificationsRepository<T> repository = chooseRepository(entityType);
-        if (repository == null) throw new WrongEntityTypeException(entityType);
         T notification = repository.findById(entityId).orElse(null);
         NotificationDataDto notificationDataDto;
         if (notification != null) {
@@ -88,9 +86,8 @@ public class NotificationService {
 
     @Loggable
     @Transactional
-    public void deleteNotificationById(UUID entityId, Integer[] elementNumbers, String entityType) {
+    public void deleteNotificationById(UUID entityId, Integer[] elementNumbers, EntityTypes entityType) {
         INotificationsRepository<? extends AbstractNotificationDocument> repository = chooseRepository(entityType);
-        if (repository == null) throw new WrongEntityTypeException(entityType);
         if (!repository.existsById(entityId))
             throw new NotificationNotFoundException(entityId.toString());
         if (elementNumbers != null) {
@@ -106,9 +103,8 @@ public class NotificationService {
 
     @Loggable
     @Transactional
-    public void updateById(UUID id, @Valid NotificationDataDto notificationDataDto, String entityType) {
+    public void updateById(UUID id, @Valid NotificationDataDto notificationDataDto, EntityTypes entityType) {
         INotificationsRepository<? extends AbstractNotificationDocument> repository = chooseRepository(entityType);
-        if (repository == null) throw new WrongEntityTypeException(entityType);
         if (!repository.existsById(id))
             throw new NotificationNotFoundException(id.toString());
         try {
@@ -123,15 +119,16 @@ public class NotificationService {
     public void sendScheduledNotifications() {
         List<INotificationsRepository<? extends AbstractNotificationDocument>> collections = List.of(contactNotificationsRepository, studentNotificationsRepository, groupNotificationsRepository, lecturerNotificationsRepository);
         collections.forEach(repository -> {
-            Map<UUID, List<NotificationDataDto>> mapOfDocs = repository.findAll().stream().collect(Collectors.toMap(AbstractNotificationDocument::getId, AbstractNotificationDocument::getNotificationData));
-            mapOfDocs.entrySet().removeIf(entry -> {
-                entry.getValue().removeIf(value -> value.getScheduledTime().isAfter(LocalDateTime.now()));
-                return entry.getValue().isEmpty();
-            });
+//            Map<UUID, List<NotificationDataDto>> mapOfDocs = repository.findAll().stream().collect(Collectors.toMap(AbstractNotificationDocument::getId, AbstractNotificationDocument::getNotificationData));
+            Map<UUID, List<NotificationDataDto>> mapOfDocs = repository.findByScheduledTimeBefore(LocalDateTime.now())
+                    .stream().collect(Collectors.toMap(AbstractNotificationDocument::getId, AbstractNotificationDocument::getNotificationData));
+//            mapOfDocs.entrySet().removeIf(entry -> {
+//                entry.getValue().removeIf(value -> value.getScheduledTime().isAfter(LocalDateTime.now()));
+//                return entry.getValue().isEmpty();
+//            });
             sseService.sendMessages(mapOfDocs);
+            repository.deleteByIdIfNotificationDataIsEmpty();
         });
-
-
     }
 
 

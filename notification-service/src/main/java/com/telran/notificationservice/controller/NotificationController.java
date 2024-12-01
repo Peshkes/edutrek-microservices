@@ -35,7 +35,7 @@ public class NotificationController {
 
     @GetMapping("/{entityType}/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public AbstractNotificationDocument getById(@PathVariable UUID id, @PathVariable String entityType) {
+    public AbstractNotificationDocument getById(@PathVariable UUID id, @PathVariable EntityTypes entityType) {
         return service.getById(id, entityType);
     }
 
@@ -47,19 +47,19 @@ public class NotificationController {
 
     @PostMapping("/{entityType}/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<String> addNotificationToEntity(@PathVariable UUID id,@PathVariable String entityType, @RequestBody @Valid NotificationDto notificationDto) {
+    public ResponseEntity<String> addNotificationToEntity(@PathVariable UUID id,@PathVariable EntityTypes entityType, @RequestBody @Valid NotificationDto notificationDto) {
        service.addNotificationToId(id, notificationDto, entityType);
        return new ResponseEntity<>("Notification for " + entityType + ": " + id + " created", HttpStatus.CREATED);
     }
 
     @DeleteMapping("/{entityType}")
-    public ResponseEntity<String> deleteById( @RequestBody @Valid DeleteNotificationDto deleteNotificationDto, @PathVariable String entityType) {
+    public ResponseEntity<String> deleteById( @RequestBody @Valid DeleteNotificationDto deleteNotificationDto, @PathVariable EntityTypes entityType) {
         service.deleteNotificationById(deleteNotificationDto.getEntityId(), deleteNotificationDto.getNotificationId(), entityType);
         return new ResponseEntity<>("Notification deleted", HttpStatus.OK);
     }
 
     @PutMapping("/{entityType}/{id}")
-    public ResponseEntity<String> updateById(@PathVariable UUID id,@PathVariable String entityType, @RequestBody @Valid NotificationDataDto notificationDataDto) {
+    public ResponseEntity<String> updateById(@PathVariable UUID id,@PathVariable EntityTypes entityType, @RequestBody @Valid NotificationDataDto notificationDataDto) {
         service.updateById(id, notificationDataDto, entityType);
         return new ResponseEntity<>("Contact updated", HttpStatus.OK);
     }

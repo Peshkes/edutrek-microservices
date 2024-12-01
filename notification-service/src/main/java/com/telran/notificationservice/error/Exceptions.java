@@ -1,6 +1,8 @@
 package com.telran.notificationservice.error;
 
 
+import com.telran.notificationservice.persistence.EntityTypes;
+
 import java.util.UUID;
 
 import static com.telran.notificationservice.error.ShareErrors.*;
@@ -18,7 +20,7 @@ public class Exceptions extends RuntimeException {
     }
 
     public static class WrongEntityTypeException extends Exceptions {
-        public WrongEntityTypeException(String message) {
+        public WrongEntityTypeException(EntityTypes message) {
             super(WRONG_ENTITY_TYPE + message);
         }
     }

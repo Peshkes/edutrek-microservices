@@ -38,7 +38,6 @@ public class SseService {
             List<Integer> list = new LinkedList<>();
             v.forEach(n -> {
                 try {
-                    System.out.println(n);
                     emitter.send(n);
                     list.add(n.getNotificationId());
                 } catch (IOException e) {
@@ -47,8 +46,5 @@ public class SseService {
                 notificationsRepository.deleteNotificationDocumentsById(k, list.toArray(new Integer[0]));
             });
         });
-
-
     }
-
 }
