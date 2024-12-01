@@ -19,7 +19,6 @@ public class AddGroupDto {
     private String groupName;
 
     @NotNull(message = "Start date cannot be null")
-    @PastOrPresent(message = "Start date must be in the past or present")
     private LocalDate startDate;
 
     @NotNull(message = "Finish date cannot be null")

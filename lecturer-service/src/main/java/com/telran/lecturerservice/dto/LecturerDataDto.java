@@ -33,4 +33,6 @@ public class LecturerDataDto {
 
     @Size(max = 255, message = COMMENT_SIZE)
     private String comment;
+
+    private String logText = null;
 }

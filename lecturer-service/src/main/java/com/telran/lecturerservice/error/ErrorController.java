@@ -19,6 +19,11 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 public class ErrorController {
 
+    @ExceptionHandler(BranchNotFoundException.class)
+    ResponseEntity<String> branchNotFoundExceptionHandler(BranchNotFoundException e) {
+        return returnResponse(e.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(LecturerNotFoundException.class)
     ResponseEntity<String> lecturerNotFoundExceptionHandler(LecturerNotFoundException e) {
         return returnResponse(e.getMessage(), HttpStatus.NOT_FOUND);

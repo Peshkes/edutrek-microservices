@@ -21,7 +21,7 @@ public class BranchService {
     private final BranchRepository repository;
 
     @Loggable
-    @Cacheable(key = "#root.methodName")
+    @Cacheable(key = "{'getALl'}")
     public List<BranchEntity> getAll() {
         return repository.findAll();
     }
@@ -47,7 +47,8 @@ public class BranchService {
     @Transactional
     @Caching(evict = {
             @CacheEvict(key = "#id"),
-            @CacheEvict(key = "'exist:' + #id")
+            @CacheEvict(key = "'exist:' + #id"),
+            @CacheEvict(key = "'getAll'")
     })
     public void deleteById(int id) {
         if (!repository.existsById(id)) throw new BranchNotFoundException(String.valueOf(id));
@@ -61,7 +62,11 @@ public class BranchService {
 
     @Loggable
     @Transactional
-    @CachePut(key = "#id")
+    @Caching(evict = {
+            @CacheEvict(key = "#id"),
+            @CacheEvict(key = "'exist:' + #id"),
+            @CacheEvict(key = "'getAll'")
+    })
     public void updateById(int id, BranchDataDto branchData) {
         BranchEntity branchEntity = repository.findById(id).orElseThrow(() -> new BranchNotFoundException(String.valueOf(id)));
         branchEntity.setBranchName(branchData.getBranchName());
