@@ -158,20 +158,20 @@ public class StudentsService {
         String email = studentData.getEmail();
         if (!entity.getPhone().equals(email)) {
             entity.setPhone(email);
-            updates.add("phone");
+            updates.add("email");
         }
 
         String comment = studentData.getComment();
         if (!entity.getComment().equals(comment)) {
             entity.setPhone(comment);
-            updates.add("phone");
+            updates.add("comment");
         }
 
+        int status = studentData.getStatusId();
         if (entity.getStatusId() != statusId) {
             entity.setStatusId(statusId);
             updates.add("status");
         }
-
 
         int branch = studentData.getBranchId();
         if (entity.getBranchId() != branch) {
@@ -182,7 +182,7 @@ public class StudentsService {
         UUID course = studentData.getTargetCourseId();
         if (!entity.getTargetCourseId().equals(course)) {
             entity.setTargetCourseId(course);
-            updates.add("branch");
+            updates.add("course");
         }
 
         int fullPayment = studentData.getFullPayment();

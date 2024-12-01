@@ -2,9 +2,12 @@ package com.telran.lecturerservice.service;
 
 import com.telran.lecturerservice.dto.LecturerDataDto;
 import com.telran.lecturerservice.dto.LecturerPaginationResponseDto;
+import com.telran.lecturerservice.error.BranchNotFoundException;
 import com.telran.lecturerservice.error.DatabaseException.*;
 import com.telran.lecturerservice.error.LecturerNotFoundException;
+import com.telran.lecturerservice.feign.BranchClient;
 import com.telran.lecturerservice.feign.GroupClient;
+import com.telran.lecturerservice.feign.LogClient;
 import com.telran.lecturerservice.logging.Loggable;
 import com.telran.lecturerservice.persistence.*;
 import feign.FeignException;
@@ -29,6 +32,8 @@ public class LectureService {
     private final LecturerRepository repository;
     private final LecturerArchiveRepository archiveRepository;
     private final GroupClient groupClient;
+    private final LogClient logClient;
+    private final BranchClient branchClient;
 
     @Loggable
     public BaseLecturer getById(UUID id) {
@@ -55,9 +60,14 @@ public class LectureService {
 
     @Loggable
     @Transactional
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(LecturerDataDto data) {
         try {
-            repository.save(new LecturerEntity(data.getLecturerName(), data.getPhone(), data.getEmail(), data.getBranchId(), data.getComment()));
+            String branchName = getBranchName(data.getBranchId());
+            UUID lecturerId = repository.save(new LecturerEntity(data.getLecturerName(), data.getPhone(), data.getEmail(), data.getBranchId(), data.getComment())).getLecturerId();
+            String log = data.getLogText();
+            logClient.add(lecturerId,
+                    log != null ? log : "New lecturer added. Branch: " + branchName);
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
@@ -78,6 +88,7 @@ public class LectureService {
                 else
                     throw new LecturerNotFoundException(id.toString());
             }
+            logClient.deleteById(id);
             return lecturer;
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
@@ -95,13 +106,50 @@ public class LectureService {
 
     @Loggable
     @Transactional
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void updateById(UUID id, LecturerDataDto data) {
+        checkBranchExists(data.getBranchId());
         BaseLecturer entity = repository.getLecturerByLecturerId(id).or(() -> archiveRepository.getLecturerByLecturerId(id)).orElseThrow(() -> new LecturerNotFoundException(id.toString()));
-        entity.setLecturerName(data.getLecturerName());
-        entity.setPhone(data.getPhone());
-        entity.setEmail(data.getEmail());
-        entity.setBranchId(data.getBranchId());
-        entity.setComment(data.getComment());
+        List<String> updates = updateEntity(data, entity);
+        String log = data.getLogText();
+        if (!updates.isEmpty())
+            logClient.add(id, log != null ? log : "Lecturer updated. Updated info: " + updates);
+    }
+
+    private <T extends BaseLecturer> List<String> updateEntity(LecturerDataDto data, T entity) {
+        List<String> updates = new ArrayList<>();
+
+        String name = data.getLecturerName();
+        if (!entity.getLecturerName().equals(name)) {
+            entity.setLecturerName(name);
+            updates.add("name");
+        }
+
+        String phone = data.getPhone();
+        if (!entity.getPhone().equals(phone)) {
+            entity.setPhone(phone);
+            updates.add("phone");
+        }
+
+        String email = data.getEmail();
+        if (!entity.getPhone().equals(email)) {
+            entity.setPhone(email);
+            updates.add("email");
+        }
+
+        String comment = data.getComment();
+        if (!entity.getComment().equals(comment)) {
+            entity.setPhone(comment);
+            updates.add("comment");
+        }
+
+        int branch = data.getBranchId();
+        if (entity.getBranchId() != branch) {
+            entity.setBranchId(branch);
+            updates.add("branch");
+        }
+
+        return updates;
     }
 
     @Loggable
@@ -111,6 +159,7 @@ public class LectureService {
             BaseLecturer lecturer = deleteById(uuid);
             try {
                 archiveRepository.save(new LecturerArchiveEntity(lecturer, reason));
+                logClient.add(uuid, "Lecturer archived. Reason: " + reason);
             } catch (Exception e) {
                 throw new DatabaseAddingException(e.getMessage());
             }
@@ -120,5 +169,16 @@ public class LectureService {
     @Loggable
     public boolean existsById(UUID id) {
         return repository.existsById(id) || archiveRepository.existsById(id);
+    }
+
+    private String getBranchName(int branchId) {
+        String branchName = branchClient.getNameById(branchId);
+        if (branchName == null) throw new BranchNotFoundException(String.valueOf(branchId));
+        return branchName;
+    }
+
+    private void checkBranchExists(int branchId) {
+        boolean isExists = branchClient.existsById(branchId);
+        if (!isExists) throw new BranchNotFoundException(String.valueOf(branchId));
     }
 }

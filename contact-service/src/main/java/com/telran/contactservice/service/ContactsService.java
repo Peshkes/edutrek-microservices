@@ -164,13 +164,13 @@ public class ContactsService {
         String email = contactData.getEmail();
         if (!entity.getPhone().equals(email)) {
             entity.setPhone(email);
-            updates.add("phone");
+            updates.add("email");
         }
 
         String comment = contactData.getComment();
         if (!entity.getComment().equals(comment)) {
             entity.setPhone(comment);
-            updates.add("phone");
+            updates.add("comment");
         }
 
         int status = contactData.getStatusId();
@@ -188,7 +188,7 @@ public class ContactsService {
         UUID course = contactData.getTargetCourseId();
         if (!entity.getTargetCourseId().equals(course)) {
             entity.setTargetCourseId(course);
-            updates.add("branch");
+            updates.add("course");
         }
         return updates;
     }
@@ -234,9 +234,7 @@ public class ContactsService {
             } catch (Exception e) {
                 throw new DatabaseDeletingException(e.getMessage());
             }
-            logFeignClient.add(
-                    id,
-                    "Contact " + contact.getContactName() + " promoted to student" );
+            logFeignClient.add(id, "Contact " + contact.getContactName() + " promoted to student" );
         }
     }
 
