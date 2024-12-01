@@ -13,4 +13,5 @@ public interface IContactRepository<T extends AbstractContacts> extends JpaRepos
 
    boolean existsByPhoneOrEmail( String phone, String email);
 
+   AbstractContacts deleteByPhoneOrEmail(String phone, String email);
 }

@@ -30,4 +30,6 @@ public class StudentsDataDto {
     private String comment;
     private int fullPayment;
     private boolean documentsDone;
+    private String logText = null;
+
 }

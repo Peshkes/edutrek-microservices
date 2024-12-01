@@ -19,8 +19,8 @@ public interface StudentFeignClient {
     @RequestMapping(method = RequestMethod.GET, value = "/students/exists/{id}")
     boolean existsById(@PathVariable UUID id);
 
-    @RequestMapping(method = RequestMethod.GET, value = "/students/exists/{phone}/{email}")
-    AbstractStudentDto findByPhoneOrEmail(@PathVariable String phone, @PathVariable String email);
+    @RequestMapping(method = RequestMethod.GET, value = "/students/find/{phone}/{email}")
+    AbstractStudentDto findByPhoneOrEmailAndDelete(@PathVariable String phone, @PathVariable String email);
 
     @RequestMapping(method = RequestMethod.GET, value = "/students/{id}")
     AbstractStudentDto promoteContactToStudentById(@PathVariable UUID id, StudentsFromContactDataDto data);
@@ -28,6 +28,9 @@ public interface StudentFeignClient {
     @RequestMapping(method = RequestMethod.POST, value = "/students/find_students")
     List<AbstractStudentDto> findStudents(@RequestBody FindStudentsDto data);
 
+    @RequestMapping(method = RequestMethod.DELETE, value = "/students/exists/delete/{id}")
+    AbstractStudentDto deleteStudentIfExists(@PathVariable UUID id);
+
     @RequestMapping(method = RequestMethod.POST, value = "")
-    AbstractStudentDto save(@PathVariable StudentsDataDto data);
+    AbstractStudentDto save(@RequestBody StudentsDataDto data);
 }

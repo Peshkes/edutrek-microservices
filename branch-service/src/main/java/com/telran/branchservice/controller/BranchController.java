@@ -30,6 +30,12 @@ public class BranchController {
         return branchService.getById(id);
     }
 
+    @GetMapping("/name/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public String getBranchNameById(@PathVariable int id) {
+        return branchService.getById(id).getBranchName();
+    }
+
     @PostMapping("")
     public ResponseEntity<String> addNewBranch(@RequestBody @Valid BranchDataDto branchData) {
         branchService.addEntity(branchData);

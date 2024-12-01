@@ -62,8 +62,10 @@ public class GroupService {
         long totalGroups;
 
         Specification<? extends BaseGroup> specification = Specification.where(null);
-        if (courseId != null) specification = specification.and(GroupSpecifications.hasCourseId(UUID.fromString(courseId)));
-        if (search != null && !search.isEmpty()) specification = specification.and(GroupSpecifications.searchByQuery(search));
+        if (courseId != null)
+            specification = specification.and(GroupSpecifications.hasCourseId(UUID.fromString(courseId)));
+        if (search != null && !search.isEmpty())
+            specification = specification.and(GroupSpecifications.searchByQuery(search));
 
         if (isActive != null) {
             Page<? extends BaseGroup> retrievedGroups = isActive
@@ -157,9 +159,9 @@ public class GroupService {
 
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     private <T extends BaseLecturerByGroup> void addLecturersToGroup(List<ChangeLecturersDto> changeLecturers, UUID groupId,
-                                                                         ILecturerByGroupRepository<T> repository, ThreeFunction<UUID, UUID, Boolean, T> entityConstructor) {
+                                                                     ILecturerByGroupRepository<T> repository, ThreeFunction<UUID, UUID, Boolean, T> entityConstructor) {
         for (ChangeLecturersDto changeLecturer : changeLecturers) {
-            if (lecturerClient.existsById(changeLecturer.getLecturerId())){
+            if (lecturerClient.existsById(changeLecturer.getLecturerId())) {
                 try {
                     T entity = entityConstructor.apply(groupId, changeLecturer.getLecturerId(), changeLecturer.getIsWebinarist());
                     repository.save(entity);
@@ -252,7 +254,7 @@ public class GroupService {
     public void archiveStudents(UUID id, List<UUID> students) {
         if (repository.existsById(id)) {
             for (UUID student : students) {
-                BaseStudentsByGroup studentsByGroup = studentsByGroupRepository.getByGroupIdAndStudentId(id, student).or(() -> studentsByGroupArchiveRepository.getByGroupIdAndStudentId(id, student)).orElseThrow(() -> new StudentNotFoundInThisGroupException(id.toString(), student.toString()));
+                BaseStudentsByGroup studentsByGroup = studentsByGroupRepository.getByGroupIdAndStudentId(id, student).orElseThrow(() -> new StudentNotFoundInThisGroupException(id.toString(), student.toString()));
                 try {
                     studentsByGroup.setIsActive(false);
                 } catch (Exception e) {
@@ -261,6 +263,22 @@ public class GroupService {
             }
         } else
             throw new GroupNotFoundException(String.valueOf(id));
+    }
+
+    @Loggable
+    @Transactional
+    public void archiveStudentsByStudentId(UUID studentId) {
+        List<BaseStudentsByGroup> groups = studentsByGroupRepository.findByStudentId(studentId);
+        if (groups != null && !groups.isEmpty()) {
+            for (BaseStudentsByGroup group : groups) {
+                try {
+                    group.setIsActive(false);
+                } catch (Exception e) {
+                    throw new DatabaseUpdatingException(e.getMessage());
+                }
+            }
+        } else
+            throw new GroupNotFoundException(String.valueOf(studentId));
     }
 
     @Loggable
@@ -302,6 +320,7 @@ public class GroupService {
         }
     }
 
+
     private GroupEntity constructEntity(AddGroupDto group) {
         return new GroupEntity(
                 group.getGroupName(),
@@ -315,4 +334,23 @@ public class GroupService {
                 group.getDeactivateAfter()
         );
     }
-}
+
+    @Loggable
+    @Transactional
+    public void deleteByStudentId(UUID studentId, boolean isCurrent) {
+        List<BaseStudentsByGroup> groups = isCurrent ? studentsByGroupRepository.findByStudentId(studentId) : studentsByGroupArchiveRepository.findByStudentId(studentId);
+        if (groups != null && !groups.isEmpty()) {
+            for (BaseStudentsByGroup group : groups) {
+                try {
+                    if (isCurrent)
+                        repository.deleteGroupByGroupId(group.getGroupId());
+                     else
+                        archiveRepository.deleteGroupByGroupId(group.getGroupId());
+                    } catch(Exception e){
+                        throw new DatabaseUpdatingException(e.getMessage());
+                    }
+                }
+            } else
+            throw new GroupNotFoundException(String.valueOf(studentId));
+        }
+    }

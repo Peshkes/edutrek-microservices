@@ -12,4 +12,8 @@ public interface BranchFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/branches/exists/{id}")
     boolean existsById(@PathVariable int id);
+
+    @RequestMapping(method = RequestMethod.GET, value = "/branches/name/{id}")
+    String getNameById(@PathVariable int id);
 }
+

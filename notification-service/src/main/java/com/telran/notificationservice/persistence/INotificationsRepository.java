@@ -1,7 +1,7 @@
 package com.telran.notificationservice.persistence;
 
 
-import com.telran.notificationservice.dto.NotificationDataDto;
+import org.springframework.data.mongodb.repository.DeleteQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.data.mongodb.repository.Update;
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface NotificationsRepository extends MongoRepository<NotificationDocument, UUID> {
+public interface INotificationsRepository<T extends AbstractNotificationDocument> extends MongoRepository<T, UUID> {
 
 
     @Query("{ '_id': ?0}")
@@ -23,6 +23,10 @@ public interface NotificationsRepository extends MongoRepository<NotificationDoc
     @Update(value = "{ '$set': { 'notificationData.$.notificationDate': ?2, 'notificationData.$.notificationText': ?3 } }")
     void updateNotificationDocumentsByNotificationId(UUID entityId, int notificationId, LocalDateTime notificationDate, String notificationText);
 
-    @Query("{ '_id': ?0}")
-    List<NotificationDataDto> findByScheduledTimeBefore(UUID id, LocalDateTime time);
+    @Query("{ 'notificationData.scheduledTime': { '$lt': ?0 } }")
+    List<AbstractNotificationDocument> findByScheduledTimeBefore(LocalDateTime time);
+
+    @DeleteQuery("{ 'notificationData': { '$size': 0 } }")
+    void deleteByIdIfNotificationDataIsEmpty();
+
 }

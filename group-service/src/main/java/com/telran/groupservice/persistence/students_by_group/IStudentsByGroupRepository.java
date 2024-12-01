@@ -15,4 +15,6 @@ public interface IStudentsByGroupRepository<T extends BaseStudentsByGroup> exten
    void deleteByGroupId(UUID groupId);
    List<T> getByGroupId(@Param("id") UUID uuid);
    Optional<BaseStudentsByGroup> getByGroupIdAndStudentId(UUID groupId, UUID studentId);
+
+    List<BaseStudentsByGroup> findByStudentId(UUID studentId);
 }

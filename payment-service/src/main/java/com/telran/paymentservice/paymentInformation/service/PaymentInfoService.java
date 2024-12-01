@@ -1,12 +1,13 @@
 package com.telran.paymentservice.paymentInformation.service;
 
 
-import com.telran.paymentservice.error.DatabaseException.*;
-import com.telran.paymentservice.error.ShareException.*;
+import com.telran.paymentservice.error.DatabaseException.DatabaseAddingException;
+import com.telran.paymentservice.error.DatabaseException.DatabaseDeletingException;
+import com.telran.paymentservice.error.ShareException.PaymentInfoNotFoundException;
+import com.telran.paymentservice.error.ShareException.StudentNotFoundException;
 import com.telran.paymentservice.logging.Loggable;
 import com.telran.paymentservice.paymentInformation.dto.PaymentInfoDataDto;
 import com.telran.paymentservice.paymentInformation.dto.PaymentsInfoSearchDto;
-
 import com.telran.paymentservice.paymentInformation.feign.StudentsFeignClient;
 import com.telran.paymentservice.paymentInformation.persistence.AbstractPaymentInformation;
 import com.telran.paymentservice.paymentInformation.persistence.archive.PaymentInfoArchiveEntity;
@@ -17,7 +18,7 @@ import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +28,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -53,7 +55,7 @@ public class PaymentInfoService {
         Pageable pageable = PageRequest.of(page, pageSize);
         Specification<PaymentInfoEntity> specs = getPaymentsSpecifications(studentId);
         Page<? extends AbstractPaymentInformation> pageFoundPayments = repository.findAll(specs, pageable);
-        List<AbstractPaymentInformation> foundPayments = (List<AbstractPaymentInformation>)pageFoundPayments.getContent();
+        List<AbstractPaymentInformation> foundPayments = (List<AbstractPaymentInformation>) pageFoundPayments.getContent();
         if (foundPayments.size() < pageSize) {
             Specification<PaymentInfoArchiveEntity> archiveSpecs = getPaymentsSpecifications(studentId);
             Page<? extends AbstractPaymentInformation> pageFoundArchivePayments = archiveRepository.findAll(archiveSpecs, PageRequest.of(page, pageSize - foundPayments.size()));
@@ -62,6 +64,11 @@ public class PaymentInfoService {
                 foundPayments.addAll(foundArchivePayments);
         }
         return new PaymentsInfoSearchDto(foundPayments, page, pageSize, foundPayments.size());
+    }
+
+    @Transactional
+    public void deleteByStudentId(UUID studentId) {
+        repository.deleteByStudentId(studentId);
     }
 
     @Loggable
@@ -85,7 +92,10 @@ public class PaymentInfoService {
 
     @Loggable
     @Transactional
-    @CachePut(key = "#id")
+    @Caching(evict = {
+            @CacheEvict(key = "#id"),
+            @CacheEvict(key = "{'getAll'}")
+    })
     public void deleteById(UUID id) {
         if (!repository.existsById(id))
             throw new PaymentInfoNotFoundException(String.valueOf(id));
@@ -98,7 +108,10 @@ public class PaymentInfoService {
 
     @Loggable
     @Transactional
-    @CachePut(key = "#id")
+    @Caching(evict = {
+            @CacheEvict(key = "#id"),
+            @CacheEvict(key = "{'getAll'}")
+    })
     public void updateById(UUID id, PaymentInfoDataDto paymentInfoDataDto) {
         AbstractPaymentInformation paymentEntity = repository.findByPaymentId(id).or(() -> archiveRepository.findById(id)).orElseThrow(() -> new PaymentInfoNotFoundException(id.toString()));
         updateEntity(paymentInfoDataDto, paymentEntity);
@@ -114,17 +127,22 @@ public class PaymentInfoService {
 
     @Loggable
     @Transactional
-    @CachePut(key = "#id")
+    @Caching(evict = {
+            @CacheEvict(key = "#id"),
+            @CacheEvict(key = "{'getAll'}")
+    })
     public void movePaymentsToArchive(UUID id) {
-        PaymentInfoEntity paymentEntity = repository.findById(id).orElseThrow(() -> new PaymentInfoNotFoundException(id.toString()));
-        PaymentInfoArchiveEntity paymentArchiveEntity = new PaymentInfoArchiveEntity(paymentEntity);
+        List<PaymentInfoEntity> paymentEntity = repository.findByStudentId(id).orElseThrow(() -> new PaymentInfoNotFoundException(id.toString()));
+        List<PaymentInfoArchiveEntity> archivePayments = new ArrayList<>();
+        if (!paymentEntity.isEmpty())
+            paymentEntity.forEach(payment -> archivePayments.add(new PaymentInfoArchiveEntity(payment)));
         try {
-            repository.deleteById(id);
+            repository.deleteByStudentId(id);
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }
         try {
-            archiveRepository.save(paymentArchiveEntity);
+            archiveRepository.saveAll(archivePayments);
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }

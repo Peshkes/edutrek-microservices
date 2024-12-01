@@ -1,8 +1,8 @@
-package com.telran.notificationservice;
+package com.telran.notificationservice.service;
 
 
 import com.telran.notificationservice.dto.NotificationDataDto;
-import com.telran.notificationservice.persistence.NotificationsRepository;
+import com.telran.notificationservice.persistence.contact_notifications.ContactNotificationsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -14,7 +14,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class SseService {
-    private final NotificationsRepository notificationsRepository;
+    private final ContactNotificationsRepository notificationsRepository;
     private final Map<UUID, SseEmitter> clients = new HashMap<>();
 
 
@@ -38,7 +38,6 @@ public class SseService {
             List<Integer> list = new LinkedList<>();
             v.forEach(n -> {
                 try {
-                    System.out.println(n);
                     emitter.send(n);
                     list.add(n.getNotificationId());
                 } catch (IOException e) {
@@ -47,8 +46,5 @@ public class SseService {
                 notificationsRepository.deleteNotificationDocumentsById(k, list.toArray(new Integer[0]));
             });
         });
-
-
     }
-
 }

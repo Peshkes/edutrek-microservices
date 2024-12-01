@@ -10,6 +10,5 @@ import java.util.UUID;
 
 @Repository
 public interface StudentsRepository extends IStudentRepository<StudentEntity>,JpaRepository<StudentEntity, UUID> , JpaSpecificationExecutor<StudentEntity>{
-
     StudentEntity findByPhoneOrEmail(String phone, String email);
 }
