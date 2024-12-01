@@ -21,11 +21,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -52,8 +53,7 @@ public class ContactsService {
         String statusName = statusId == null ? null : statusFeignClient.getStatusById(statusId).getStatusName();
         Pageable pageable = PageRequest.of(page, pageSize);
         if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
-            FoundEntitiesDto foundContactArchive = findContactsAndStudents(pageable, search, statusId, courseId, contactArchiveRepository, IS_ARCHIVE_STUDENT_REPOSITORY, page, pageSize);
-            List<AbstractContacts> foundContacts = foundContactArchive.getFoundContacts();
+            List<AbstractContacts> foundContacts = findContactsAndStudents(pageable, search, statusId, courseId, contactArchiveRepository, IS_ARCHIVE_STUDENT_REPOSITORY, page, pageSize);
             return new ContactSearchDto(foundContacts, page, pageSize, foundContacts.size());
         } else if (statusName != null && statusName.equalsIgnoreCase("Student")) {
             List<AbstractStudentDto> foundStudents = studentFeignClient.findStudents(new FindStudentsDto(pageable, search, statusId, null, courseId, true));
@@ -65,11 +65,9 @@ public class ContactsService {
             List<? extends AbstractContacts> contactFromStudents = foundStudents.stream().map(AbstractContacts::new).collect(Collectors.toList());
             return new ContactSearchDto(contactFromStudents, page, pageSize, contactFromStudents.size());
         } else {
-            FoundEntitiesDto foundContactDto = findContactsAndStudents(pageable, search, statusId, courseId, contactRepository, IS_CURRENT_STUDENT_REPOSITORY, page, pageSize);
-            List<AbstractContacts> foundContacts = foundContactDto.getFoundContacts();
+            List<AbstractContacts> foundContacts = findContactsAndStudents(pageable, search, statusId, courseId, contactRepository, IS_CURRENT_STUDENT_REPOSITORY, page, pageSize);
             if (foundContacts.size() < pageSize) {
-                FoundEntitiesDto foundContactArchiveEntities = findContacts(PageRequest.of(page, pageSize - foundContacts.size()), search, statusId, courseId, contactArchiveRepository);
-                List<AbstractContacts> foundContactsArchive = foundContactArchiveEntities.getFoundContacts();
+                List<AbstractContacts> foundContactsArchive = findContacts(PageRequest.of(page, pageSize - foundContacts.size()), search, statusId, courseId, contactArchiveRepository);
                 if (!foundContactsArchive.isEmpty()) {
                     foundContacts.addAll(foundContactsArchive);
                 }
@@ -91,12 +89,15 @@ public class ContactsService {
     @Loggable
     @Transactional
     public void addEntity(ContactsDataDto contactData) {
-        checkStatusCourseBranch(contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getStatusId());
+        StatusCourseBranchNamesDto properties = checkStatusCourseBranch(contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getStatusId());
         if (!contactRepository.existsByPhoneOrEmail(contactData.getPhone(), contactData.getEmail())) {
             ContactsEntity newEntity = new ContactsEntity(contactData.getContactName(), contactData.getPhone(), contactData.getEmail(), contactData.getStatusId(), contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getComment());
             try {
                 contactRepository.save(newEntity);
-                logFeignClient.add(newEntity.getContactId(), "New contact created ");
+                String log = contactData.getLogText();
+                logFeignClient.add(
+                        newEntity.getContactId(),
+                        log != null ? log : "New contact added. Status: " + properties.getStatusName() + ", course: " + properties.getCourseName() + ", branch: " + properties.getBranchName());
             } catch (Exception e) {
                 throw new DatabaseAddingException(e.getMessage());
             }
@@ -108,39 +109,90 @@ public class ContactsService {
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void deleteById(UUID id) {
-        if (!contactRepository.existsById(id)) throw new ContactNotFoundException(id.toString());
-        logFeignClient.deleteById(id);
+        if (!contactRepository.existsById(id)) {
+            if (!contactArchiveRepository.existsById(id))
+                throw new ContactNotFoundException(id.toString());
+            else {
+                try {
+                    contactArchiveRepository.deleteById(id);
+                } catch (Exception e) {
+                    throw new DatabaseDeletingException(e.getMessage());
+                }
+            }
+        }
         try {
             contactRepository.deleteById(id);
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }
+        logFeignClient.deleteById(id);
     }
 
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void updateById(UUID id, @Valid ContactsDataDto contactData) {
-        checkStatusCourseBranch(contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getStatusId());
+        StatusCourseBranchNamesDto properties = checkStatusCourseBranch(contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getStatusId());
         AbstractContacts entity = contactRepository.getByContactId(id).or(() -> contactArchiveRepository.findById(id)).orElseThrow(() -> new ContactNotFoundException(id.toString()));
-        String statusName = statusFeignClient.getStatusById(contactData.getStatusId()).getStatusName();
-        updateEntity(contactData, entity);
-        if (entity instanceof ContactArchiveEntity && statusName != null && !statusName.equals("Archive")) {
+        String statusName = properties.getStatusName();
+        List<String> updates = updateEntity(contactData, entity);
+        if (entity instanceof ContactArchiveEntity && !statusName.equals("Archive")) {
             contactArchiveRepository.deleteById(id);
             contactRepository.save(new ContactsEntity(entity));
         }
-        logFeignClient.add(id, "New contact created ");
+        String log = contactData.getLogText();
+        logFeignClient.add(
+                id,
+                log != null ? log : "Contact updated. Updated info: " + updates);
     }
 
-    private <T extends AbstractContacts> void updateEntity(ContactsDataDto contactData, T entity) {
-        entity.setContactName(contactData.getContactName());
-        entity.setPhone(contactData.getPhone());
-        entity.setEmail(contactData.getEmail());
-        entity.setComment(contactData.getComment());
-        entity.setStatusId(contactData.getStatusId());
-        entity.setBranchId(contactData.getBranchId());
-        entity.setTargetCourseId(contactData.getTargetCourseId());
+    private <T extends AbstractContacts> List<String> updateEntity(ContactsDataDto contactData, T entity) {
+        List<String> updates = new ArrayList<>();
+
+        String name = contactData.getContactName();
+        if (!entity.getContactName().equals(name)) {
+            entity.setContactName(name);
+            updates.add("name");
+        }
+
+        String phone = contactData.getPhone();
+        if (!entity.getPhone().equals(phone)) {
+            entity.setPhone(phone);
+            updates.add("phone");
+        }
+
+        String email = contactData.getEmail();
+        if (!entity.getPhone().equals(email)) {
+            entity.setPhone(email);
+            updates.add("phone");
+        }
+
+        String comment = contactData.getComment();
+        if (!entity.getComment().equals(comment)) {
+            entity.setPhone(comment);
+            updates.add("phone");
+        }
+
+        int status = contactData.getStatusId();
+        if (entity.getStatusId() != status) {
+            entity.setStatusId(status);
+            updates.add("status");
+        }
+
+        int branch = contactData.getBranchId();
+        if (entity.getBranchId() != branch) {
+            entity.setBranchId(branch);
+            updates.add("branch");
+        }
+
+        UUID course = contactData.getTargetCourseId();
+        if (!entity.getTargetCourseId().equals(course)) {
+            entity.setTargetCourseId(course);
+            updates.add("branch");
+        }
+        return updates;
     }
+
 
     @Loggable
     @Transactional
@@ -160,6 +212,9 @@ public class ContactsService {
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
+        logFeignClient.add(
+                id,
+                "Contact archived. Reason: " + reason);
     }
 
     @Loggable
@@ -179,36 +234,39 @@ public class ContactsService {
             } catch (Exception e) {
                 throw new DatabaseDeletingException(e.getMessage());
             }
+            logFeignClient.add(
+                    id,
+                    "Contact " + contact.getContactName() + " promoted to student" );
         }
     }
 
     @Loggable
-    private void checkStatusCourseBranch(int branchId, UUID targetCourseId, int statusId) {
-        if (!branchFeignClient.existsById(branchId))
-            throw new BranchNotFoundException(String.valueOf(branchId));
-        if (!courseFeignClient.existsById(targetCourseId))
-            throw new CourseNotFoundException(String.valueOf(targetCourseId));
-        if (!statusFeignClient.existsById(statusId))
-            throw new StatusNotFoundException(statusId);
+    private StatusCourseBranchNamesDto checkStatusCourseBranch(int branchId, UUID targetCourseId, int statusId) {
+        String branch = branchFeignClient.getNameById(branchId);
+        if (branch == null) throw new BranchNotFoundException(String.valueOf(branchId));
+        String course = courseFeignClient.getNameById(targetCourseId);
+        if (course == null) throw new CourseNotFoundException(String.valueOf(branchId));
+        String status = statusFeignClient.getNameById(statusId);
+        if (status == null) throw new StatusNotFoundException(statusId);
+        return new StatusCourseBranchNamesDto(branch, course, status);
     }
 
 
     @Loggable
     @SuppressWarnings("unchecked")
-    public static <C extends AbstractContacts, E extends IContactRepository<C>> FoundEntitiesDto findContacts(Pageable pageable, String search, Integer statusId, UUID courseId, E repository) {
+    public static <C extends AbstractContacts, E extends IContactRepository<C>> List<AbstractContacts> findContacts(Pageable pageable, String search, Integer statusId, UUID courseId, E repository) {
         Specification<C> contactSpecs = new ContactsFilterSpecifications<C>().getSpecifications(search, statusId, courseId);
         Page<? extends AbstractContacts> pageContactEntity = repository.findAll(contactSpecs, pageable);
-        return new FoundEntitiesDto((List<AbstractContacts>) pageContactEntity.getContent(), null);
+        return (List<AbstractContacts>) pageContactEntity.getContent();
     }
 
     @Loggable
-    private <C extends AbstractContacts, CR extends IContactRepository<C>> FoundEntitiesDto findContactsAndStudents(Pageable pageable, String search, Integer statusId, UUID courseId, CR contactsRepository, boolean isCurrentStudentRepository, int page, int pageSize) {
-        FoundEntitiesDto foundContactEntities = findContacts(pageable, search, statusId, courseId, contactsRepository);
-        List<AbstractContacts> foundContact = foundContactEntities.getFoundContacts();
+    private <C extends AbstractContacts, CR extends IContactRepository<C>> List<AbstractContacts> findContactsAndStudents(Pageable pageable, String search, Integer statusId, UUID courseId, CR contactsRepository, boolean isCurrentStudentRepository, int page, int pageSize) {
+        List<AbstractContacts> foundContact = findContacts(pageable, search, statusId, courseId, contactsRepository);
         if (foundContact.size() < pageSize) {
             addStudents(search, statusId, courseId, isCurrentStudentRepository, page, pageSize, foundContact);
         }
-        return new FoundEntitiesDto(foundContact, null);
+        return foundContact;
     }
 
     @Loggable
@@ -217,6 +275,15 @@ public class ContactsService {
         if (!foundStudents.isEmpty()) {
             List<? extends AbstractContacts> contactFromStudents = foundStudents.stream().map(AbstractContacts::new).toList();
             foundContact.addAll(contactFromStudents);
+        }
+    }
+
+    @Loggable
+    public AbstractContacts findByPhoneOrEmailAndDelete(String phone, String email) {
+        try {
+            return contactRepository.deleteByPhoneOrEmail(phone, email);
+        } catch (Exception e) {
+            throw new DatabaseDeletingException(e.getMessage());
         }
     }
 }

@@ -14,6 +14,9 @@ public interface StatusFeignClient {
     @RequestMapping(method = RequestMethod.GET, value = "/statuses/{id}")
     StatusDto getStatusById(@PathVariable int id);
 
+    @RequestMapping(method = RequestMethod.GET, value = "/statuses/name/{id}")
+    String getNameById(@PathVariable int id);
+
     @RequestMapping(method = RequestMethod.GET, value = "/statuses/exists/{id}")
     boolean existsById(@PathVariable int id);
 

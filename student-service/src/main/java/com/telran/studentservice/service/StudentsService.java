@@ -25,6 +25,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +36,7 @@ import static com.telran.studentservice.persistence.StudentsFilterSpecifications
 
 public class StudentsService {
 
+    private static final boolean IS_CURRENT_REPOSITORY = true;
     private final StudentsRepository repository;
     private final ContactFeignClient contactFeignClient;
     private final StudentsArchiveRepository archiveRepository;
@@ -43,6 +45,7 @@ public class StudentsService {
     private final BranchFeignClient branchFeignClient;
     private final CourseFeignClient courseFeignClient;
     private final PaymentsFeignClient paymentsFeignClient;
+    private final GroupFeignClient groupFeignClient;
 
     @Loggable
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
@@ -51,7 +54,7 @@ public class StudentsService {
         Pageable pageable = PageRequest.of(page, pageSize);
         List<AbstractStudent> foundStudents;
         if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
-            foundStudents = findStudents( pageable, search, statusId, groupId, courseId, false);
+            foundStudents = findStudents(pageable, search, statusId, groupId, courseId, false);
         } else {
             foundStudents = findStudents(pageable, search, statusId, groupId, courseId, true);
             if (foundStudents.size() < pageSize) {
@@ -77,16 +80,21 @@ public class StudentsService {
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(StudentsDataDto studentData) {
-        checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
+        StatusCourseBranchNamesDto properties = checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
         if (!repository.existsByPhoneOrEmail(studentData.getPhone(), studentData.getEmail())) {
             int statusId = statusFeignClient.findStatusEntityByStatusName("Student").getStatusId();
-            AbstractContactsDto contact = contactFeignClient.findByPhoneOrEmail(studentData.getPhone(), studentData.getEmail());
-            if (contact == null) {
-                repository.save(new StudentEntity(
+            try {
+                AbstractStudent saved = repository.save(new StudentEntity(
                         studentData, statusId));
-            } else {
-                contactFeignClient.promoteContactToStudentById(contact.getContactId(), new StudentsFromContactDataDto(studentData.getFullPayment(), studentData.isDocumentsDone()));
+                String log = studentData.getLogText();
+                logFeignClient.add(
+                        saved.getStudentId(),
+                        log != null ? log : " - New contact added. Status: " + properties.getStatusName() + ", course: " + properties.getCourseName() + ", branch: " + properties.getBranchName());
+            } catch (Exception e) {
+                throw new DatabaseAddingException(e.getMessage());
             }
+
+            contactFeignClient.findByPhoneOrEmailAndDelete(studentData.getPhone(), studentData.getEmail());
         }
     }
 
@@ -94,13 +102,28 @@ public class StudentsService {
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void deleteById(UUID id) {
-        if (!repository.existsById(id)) throw new StudentNotFoundException(id.toString());
-        logFeignClient.deleteById(id);
-        try {
-            repository.deleteById(id);
-        } catch (Exception e) {
-            throw new DatabaseDeletingException(e.getMessage());
+        if (!repository.existsById(id)) {
+            if (!archiveRepository.existsById(id)) {
+                throw new StudentNotFoundException(id.toString());
+            } else {
+                try {
+                    groupFeignClient.deleteByStudentId(id, !IS_CURRENT_REPOSITORY);
+                    paymentsFeignClient.deletePaymentByStudentId(id);
+                    archiveRepository.deleteById(id);
+                } catch (Exception e) {
+                    throw new DatabaseDeletingException(e.getMessage());
+                }
+            }
+        } else {
+            try {
+                groupFeignClient.deleteByStudentId(id, IS_CURRENT_REPOSITORY);
+                paymentsFeignClient.deletePaymentByStudentId(id);
+                repository.deleteById(id);
+            } catch (Exception e) {
+                throw new DatabaseDeletingException(e.getMessage());
+            }
         }
+        logFeignClient.deleteById(id);
     }
 
     @Loggable
@@ -109,21 +132,73 @@ public class StudentsService {
     public void updateById(UUID id, StudentsDataDto studentData) {
         checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
         AbstractStudent entity = repository.getByStudentId(id).or(() -> archiveRepository.findById(id)).orElseThrow(() -> new StudentNotFoundException(id.toString()));
-        updateEntity(studentData, entity);
+        List<String> updates = updateEntity(studentData, entity);
+        String log = studentData.getLogText();
+        logFeignClient.add(
+                id,
+                log != null ? log : " - Contact updated. Updated info: " + updates);
     }
 
-    private <T extends AbstractStudent> void updateEntity(StudentsDataDto studentData, T entity) {
+    private <T extends AbstractStudent> List<String> updateEntity(StudentsDataDto studentData, T entity) {
         int statusId = statusFeignClient.findStatusEntityByStatusName("Student").getStatusId();
-        entity.setContactName(studentData.getContactName());
-        entity.setPhone(studentData.getPhone());
-        entity.setEmail(studentData.getEmail());
-        entity.setComment(studentData.getComment());
-        entity.setStatusId(statusId);
-        entity.setBranchId(studentData.getBranchId());
-        entity.setTargetCourseId(studentData.getTargetCourseId());
-        entity.setFullPayment(studentData.getFullPayment());
-        entity.setDocumentsDone(studentData.isDocumentsDone());
+        List<String> updates = new ArrayList<>();
+
+        String name = studentData.getContactName();
+        if (!entity.getContactName().equals(name)) {
+            entity.setContactName(name);
+            updates.add("name");
+        }
+
+        String phone = studentData.getPhone();
+        if (!entity.getPhone().equals(phone)) {
+            entity.setPhone(phone);
+            updates.add("phone");
+        }
+
+        String email = studentData.getEmail();
+        if (!entity.getPhone().equals(email)) {
+            entity.setPhone(email);
+            updates.add("phone");
+        }
+
+        String comment = studentData.getComment();
+        if (!entity.getComment().equals(comment)) {
+            entity.setPhone(comment);
+            updates.add("phone");
+        }
+
+        if (entity.getStatusId() != statusId) {
+            entity.setStatusId(statusId);
+            updates.add("status");
+        }
+
+
+        int branch = studentData.getBranchId();
+        if (entity.getBranchId() != branch) {
+            entity.setBranchId(branch);
+            updates.add("branch");
+        }
+
+        UUID course = studentData.getTargetCourseId();
+        if (!entity.getTargetCourseId().equals(course)) {
+            entity.setTargetCourseId(course);
+            updates.add("branch");
+        }
+
+        int fullPayment = studentData.getFullPayment();
+        if (entity.getFullPayment() != fullPayment) {
+            entity.setFullPayment(fullPayment);
+            updates.add("payment amount");
+        }
+
+        boolean documentsDone = studentData.isDocumentsDone();
+        if (entity.isDocumentsDone() != documentsDone) {
+            entity.setDocumentsDone(documentsDone);
+            updates.add("documents status");
+        }
+        return updates;
     }
+
 
     @Loggable
     @Transactional
@@ -134,9 +209,9 @@ public class StudentsService {
         student.setStatusId(statusId);
         StudentsArchiveEntity studentArchEntity = new StudentsArchiveEntity(student, reason);
         try {
-            List<AbstractPaymentInformationDto> payments = paymentsFeignClient.getPaymentByStudentId(id).paymentsInfo();
             archiveRepository.save(studentArchEntity);
-            payments.forEach(p -> paymentsFeignClient.moveToArchiveById(p.getPaymentId()));
+            paymentsFeignClient.moveToArchiveById(id);
+            groupFeignClient.archiveStudents(id);
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
@@ -145,7 +220,9 @@ public class StudentsService {
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }
-
+        logFeignClient.add(
+                id,
+                "Student archived. Reason: " + reason);
     }
 
     @Loggable
@@ -156,20 +233,29 @@ public class StudentsService {
 
     @Loggable
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    private void checkStatusCourseBranch(int branchId, UUID targetCourseId, int statusId) {
-        if (!branchFeignClient.existsById(branchId))
-            throw new BranchNotFoundException(String.valueOf(branchId));
-        if (!courseFeignClient.existsById(targetCourseId))
-            throw new CourseNotFoundException(String.valueOf(targetCourseId));
-        if (!statusFeignClient.existsById(statusId))
-            throw new StatusNotFoundException(statusId);
+    private StatusCourseBranchNamesDto checkStatusCourseBranch(int branchId, UUID targetCourseId, int statusId) {
+        String branch = branchFeignClient.getNameById(branchId);
+        if (branch == null) throw new BranchNotFoundException(String.valueOf(branchId));
+        String course = courseFeignClient.getNameById(targetCourseId);
+        if (course == null) throw new CourseNotFoundException(String.valueOf(branchId));
+        String status = statusFeignClient.getNameById(statusId);
+        if (status == null) throw new StatusNotFoundException(statusId);
+        return new StatusCourseBranchNamesDto(branch, course, status);
     }
 
     @Loggable
     @SuppressWarnings("unchecked")
     public <S extends AbstractStudent> List<AbstractStudent> findStudents(Pageable pageable, String search, Integer statusId, UUID group_id, UUID courseId, boolean isCurrentRepository) {
         Specification<S> studentSpecs = getStudentSpecifications(search, statusId, group_id, courseId);
-        Page<? extends AbstractStudent> pageContactEntity = isCurrentRepository? repository.findAll((Specification<StudentEntity>) studentSpecs, pageable): archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs, pageable);
+        Page<? extends AbstractStudent> pageContactEntity = isCurrentRepository ? repository.findAll((Specification<StudentEntity>) studentSpecs, pageable) : archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs, pageable);
         return (List<AbstractStudent>) pageContactEntity.getContent();
+    }
+
+    public AbstractStudent findByPhoneOrEmailAndDelete(String phone, String email) {
+        try {
+            return repository.deleteByPhoneOrEmail(phone, email);
+        } catch (Exception e) {
+            throw new DatabaseDeletingException(e.getMessage());
+        }
     }
 }

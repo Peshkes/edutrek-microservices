@@ -31,6 +31,12 @@ public class CourseController {
         return courseService.getById(java.util.UUID.fromString(id));
     }
 
+    @GetMapping("/name/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public String getCourseNameById(@PathVariable @UUID String id) {
+        return courseService.getById(java.util.UUID.fromString(id)).getCourseName();
+    }
+
     @PostMapping("")
     public ResponseEntity<String> addNewCourse(@RequestBody @Valid CourseDataDto courseData) {
         courseService.addEntity(courseData);

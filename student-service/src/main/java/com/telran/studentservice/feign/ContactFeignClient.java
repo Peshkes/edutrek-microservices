@@ -19,4 +19,7 @@ public interface ContactFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/contacts/{id}")
     AbstractContactsDto promoteContactToStudentById(@PathVariable UUID id, StudentsFromContactDataDto data);
+
+    @RequestMapping(method = RequestMethod.GET, value = "/contacts/find/{phone}/{email}")
+    AbstractContactsDto findByPhoneOrEmailAndDelete(@PathVariable String phone, @PathVariable String email);
 }

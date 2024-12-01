@@ -30,6 +30,12 @@ public class StatusController {
             return statusService.getById(id);
     }
 
+    @GetMapping("/name/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public String getStatusNameById(@PathVariable int id) {
+            return statusService.getById(id).getStatusName();
+    }
+
     @PostMapping("")
     public ResponseEntity<String> addNewStatus(@RequestBody @Valid StatusDataDto statusData) {
         statusService.addEntity(statusData);

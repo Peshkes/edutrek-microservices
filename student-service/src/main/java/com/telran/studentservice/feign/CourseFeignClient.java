@@ -14,4 +14,8 @@ public interface CourseFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/courses/exists/{id}")
     boolean existsById(@PathVariable UUID id);
+
+    @RequestMapping(method = RequestMethod.GET, value = "/courses/name/{id}")
+    String getNameById(@PathVariable UUID id);
+
 }

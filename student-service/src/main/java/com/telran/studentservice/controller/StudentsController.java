@@ -1,9 +1,7 @@
 package com.telran.studentservice.controller;
 
 
-
 import com.telran.studentservice.dto.FindStudentsDto;
-import com.telran.studentservice.dto.FoundEntitiesDto;
 import com.telran.studentservice.dto.StudentSearchDto;
 import com.telran.studentservice.dto.StudentsDataDto;
 import com.telran.studentservice.persistence.AbstractStudent;
@@ -47,6 +45,12 @@ public class StudentsController {
     @ResponseStatus(HttpStatus.OK)
     public boolean existsById(@PathVariable UUID id) {
         return studentService.existsById(id);
+    }
+
+    @GetMapping("/find/{phone}/{email}")
+    @ResponseStatus(HttpStatus.OK)
+    public AbstractStudent findByPhoneOrEmailAndDelete(@PathVariable String phone, @PathVariable String email) {
+        return studentService.findByPhoneOrEmailAndDelete(phone, email);
     }
 
     @PostMapping("/find_students")
