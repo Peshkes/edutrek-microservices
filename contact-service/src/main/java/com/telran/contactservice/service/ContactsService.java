@@ -97,7 +97,7 @@ public class ContactsService {
                 String log = contactData.getLogText();
                 logFeignClient.add(
                         newEntity.getContactId(),
-                        log != null ? log : " - New contact added. Status: " + properties.getStatusName() + ", course: " + properties.getCourseName() + ", branch: " + properties.getBranchName());
+                        log != null ? log : "New contact added. Status: " + properties.getStatusName() + ", course: " + properties.getCourseName() + ", branch: " + properties.getBranchName());
             } catch (Exception e) {
                 throw new DatabaseAddingException(e.getMessage());
             }
@@ -143,56 +143,55 @@ public class ContactsService {
         String log = contactData.getLogText();
         logFeignClient.add(
                 id,
-                log != null ? log : " - Contact updated. Updated info: " + updates);
+                log != null ? log : "Contact updated. Updated info: " + updates);
     }
 
     private <T extends AbstractContacts> List<String> updateEntity(ContactsDataDto contactData, T entity) {
         List<String> updates = new ArrayList<>();
 
         String name = contactData.getContactName();
-        if (!entity.getContactName().equals(name)){
+        if (!entity.getContactName().equals(name)) {
             entity.setContactName(name);
             updates.add("name");
         }
 
         String phone = contactData.getPhone();
-        if (!entity.getPhone().equals(phone)){
+        if (!entity.getPhone().equals(phone)) {
             entity.setPhone(phone);
             updates.add("phone");
         }
 
         String email = contactData.getEmail();
-        if (!entity.getPhone().equals(email)){
+        if (!entity.getPhone().equals(email)) {
             entity.setPhone(email);
             updates.add("phone");
         }
 
         String comment = contactData.getComment();
-        if (!entity.getComment().equals(comment)){
+        if (!entity.getComment().equals(comment)) {
             entity.setPhone(comment);
             updates.add("phone");
         }
 
         int status = contactData.getStatusId();
-        if (entity.getStatusId() != status){
+        if (entity.getStatusId() != status) {
             entity.setStatusId(status);
             updates.add("status");
         }
 
         int branch = contactData.getBranchId();
-        if (entity.getBranchId() != branch){
+        if (entity.getBranchId() != branch) {
             entity.setBranchId(branch);
             updates.add("branch");
         }
 
         UUID course = contactData.getTargetCourseId();
-        if (!entity.getTargetCourseId().equals(course)){
+        if (!entity.getTargetCourseId().equals(course)) {
             entity.setTargetCourseId(course);
             updates.add("branch");
         }
         return updates;
     }
-
 
 
     @Loggable
@@ -213,6 +212,9 @@ public class ContactsService {
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
+        logFeignClient.add(
+                id,
+                "Contact archived. Reason: " + reason);
     }
 
     @Loggable
@@ -220,7 +222,7 @@ public class ContactsService {
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void promoteContactToStudentById(UUID id, @Valid StudentsFromContactDataDto studentData) {
         ContactsEntity contact = contactRepository.findById(id).orElseThrow(() -> new ContactNotFoundException(id.toString()));
-        if (!studentFeignClient.existsById(id)) {//TODO make one (if exists save)
+        if (!studentFeignClient.existsById(id)) {
             contact.setStatusId(statusFeignClient.findStatusEntityByStatusName("Student").getStatusId());
             try {
                 studentFeignClient.save(new StudentsDataDto(contact, studentData));
@@ -232,6 +234,9 @@ public class ContactsService {
             } catch (Exception e) {
                 throw new DatabaseDeletingException(e.getMessage());
             }
+            logFeignClient.add(
+                    id,
+                    "Contact " + contact.getContactName() + " promoted to student" );
         }
     }
 

@@ -220,6 +220,9 @@ public class StudentsService {
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }
+        logFeignClient.add(
+                id,
+                "Student archived. Reason: " + reason);
     }
 
     @Loggable

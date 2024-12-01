@@ -18,5 +18,5 @@ import java.util.UUID;
 public class AbstractNotificationDocument {
     @Id
     private UUID id;
-    List<NotificationDataDto> notificationData;
+    private List<NotificationDataDto> notificationData;
 }

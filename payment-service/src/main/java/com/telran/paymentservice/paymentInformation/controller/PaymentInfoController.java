@@ -36,13 +36,10 @@ public class PaymentInfoController {
         return paymentInfoService.getByStudentId(page, pageSize, id);
     }
 
-    @GetMapping("/studentid/{id}")
+    @DeleteMapping("/studentid/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public void deleteByStudentId(
-            @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "pagesize", defaultValue = "10") int pageSize,
-            @PathVariable UUID id) {
-        paymentInfoService.deleteByStudentId(page, pageSize, id);
+    public void deleteByStudentId(@PathVariable UUID id) {
+        paymentInfoService.deleteByStudentId(id);
     }
 
     @PostMapping("")
