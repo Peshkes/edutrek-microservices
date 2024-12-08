@@ -141,9 +141,8 @@ public class ContactsService {
             contactRepository.save(new ContactsEntity(entity));
         }
         String log = contactData.getLogText();
-        logFeignClient.add(
-                id,
-                log != null ? log : "Contact updated. Updated info: " + updates);
+        if (!updates.isEmpty())
+            logFeignClient.add(id, log != null ? log : "Lecturer updated. Updated info: " + updates);
     }
 
     private <T extends AbstractContacts> List<String> updateEntity(ContactsDataDto contactData, T entity) {
