@@ -1,14 +1,16 @@
-package com.telran.groupservice.dto;
+package com.telran.courseservice.dto;
 
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class RabbitMessageDto{
+public class RabbitMessageDto  {
     private String type;
     private Object payload;
     private String correlationId;

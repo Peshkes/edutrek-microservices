@@ -13,7 +13,6 @@ import java.util.UUID;
 public class ChangeLecturersDto {
     private UUID lecturerId;
     private boolean isWebinarist;
-
     public boolean getIsWebinarist() {
         return isWebinarist;
     }

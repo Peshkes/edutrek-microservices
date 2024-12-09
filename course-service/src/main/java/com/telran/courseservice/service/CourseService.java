@@ -1,13 +1,18 @@
 package com.telran.courseservice.service;
 
-import com.telran.courseservice.error.CourseNotFoundException;
-import com.telran.courseservice.error.DatabaseException.*;
 import com.telran.courseservice.dto.CourseDataDto;
+import com.telran.courseservice.error.CourseNotFoundException;
+import com.telran.courseservice.error.DatabaseException.DatabaseAddingException;
+import com.telran.courseservice.error.DatabaseException.DatabaseDeletingException;
+import com.telran.courseservice.error.DatabaseException.DatabaseUpdatingException;
 import com.telran.courseservice.logging.Loggable;
 import com.telran.courseservice.persistence.CourseEntity;
 import com.telran.courseservice.persistence.CourseRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.*;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +32,7 @@ public class CourseService {
         return repository.findAll();
     }
 
-    @Loggable
+
     @Cacheable(key = "#courseId")
     public CourseEntity getById(UUID courseId) {
         return repository.findById(courseId).orElseThrow(() -> new CourseNotFoundException(String.valueOf(courseId)));
@@ -81,7 +86,7 @@ public class CourseService {
         }
     }
 
-    @Loggable
+
     @Cacheable(key = "'exist:' + #id")
     public boolean existsById(UUID id) {
         return repository.existsById(id);

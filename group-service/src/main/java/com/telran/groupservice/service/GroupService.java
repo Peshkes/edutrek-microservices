@@ -4,12 +4,10 @@ import com.telran.groupservice.ThreeFunction;
 import com.telran.groupservice.dto.AddGroupDto;
 import com.telran.groupservice.dto.ChangeLecturersDto;
 import com.telran.groupservice.dto.PaginationGroupResponseDto;
-import com.telran.groupservice.dto.RabbitMessageDto;
 import com.telran.groupservice.error.DatabaseException.DatabaseAddingException;
 import com.telran.groupservice.error.DatabaseException.DatabaseDeletingException;
 import com.telran.groupservice.error.DatabaseException.DatabaseUpdatingException;
 import com.telran.groupservice.error.Exception.*;
-import com.telran.groupservice.feign.CourseClient;
 import com.telran.groupservice.feign.LecturerClient;
 import com.telran.groupservice.key.ComposeStudentsKey;
 import com.telran.groupservice.logging.Loggable;
@@ -28,8 +26,6 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -50,7 +46,7 @@ public class GroupService {
     private final LessonsByWeekdayRepository lessonsByWeekdayRepository;
     private final WebinarsByWeekdayRepository webinarsByWeekdayRepository;
 
-    private final CourseClient courseClient;
+
     private final LecturerClient lecturerClient;
     private final GroupsRabbitProducer rabbitProducer;
 
@@ -119,21 +115,14 @@ public class GroupService {
 //        };
 //    }
 
-    private String getRequestId() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        String customId = null;
-        if (attributes != null)
-            customId = attributes.getRequest().getHeader("X-Request-ID");
-        return customId;
-    }
+
 
 
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(AddGroupDto groupData) {
-        rabbitProducer.sendMessage(new RabbitMessageDto("existsById", groupData.getCourseId(), getRequestId()), "courses_key");
-        if (!courseClient.existsById(groupData.getCourseId()))
+        if (!rabbitProducer.sendCourseExists(groupData.getCourseId()))
             throw new CourseNotFoundException(String.valueOf(groupData.getCourseId()));
         try {
             UUID groupId = repository.save(constructEntity(groupData)).getGroupId();
