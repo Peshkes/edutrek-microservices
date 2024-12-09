@@ -10,5 +10,5 @@ import java.util.UUID;
 @FeignClient(name = "LecturerClient", url = "http://lecturer-service:8080", configuration = FeignConfig.class)
 public interface LecturerClient {
     @GetMapping("/lecturers/exists/{id}")
-    Boolean existsById(@PathVariable("id") UUID id);
+    boolean existsById(@PathVariable("id") UUID id);
 }

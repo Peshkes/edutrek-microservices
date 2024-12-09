@@ -6,14 +6,11 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ChangeLecturersDto {
-    private UUID lecturerId;
-    private boolean isWebinarist;
-    public boolean getIsWebinarist() {
-        return isWebinarist;
-    }
+public class CourseDto {
+    private UUID courseId;
+    private String courseName;
+    private String courseAbbreviation;
 }

@@ -130,7 +130,7 @@ public class StudentsService {
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void updateById(UUID id, StudentsDataDto studentData) {
-        checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
+        checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId());
         AbstractStudent entity = repository.getByStudentId(id).or(() -> archiveRepository.findById(id)).orElseThrow(() -> new StudentNotFoundException(id.toString()));
         List<String> updates = updateEntity(studentData, entity);
         String log = studentData.getLogText();
@@ -140,7 +140,6 @@ public class StudentsService {
     }
 
     private <T extends AbstractStudent> List<String> updateEntity(StudentsDataDto studentData, T entity) {
-        int statusId = statusFeignClient.findStatusEntityByStatusName("Student").getStatusId();
         List<String> updates = new ArrayList<>();
 
         String name = studentData.getContactName();
@@ -165,12 +164,6 @@ public class StudentsService {
         if (!entity.getComment().equals(comment)) {
             entity.setPhone(comment);
             updates.add("comment");
-        }
-
-        int status = studentData.getStatusId();
-        if (entity.getStatusId() != statusId) {
-            entity.setStatusId(statusId);
-            updates.add("status");
         }
 
         int branch = studentData.getBranchId();
@@ -229,6 +222,13 @@ public class StudentsService {
     @Transactional
     public void graduateById(UUID id) {
         moveToArchiveById(id, "Finished course and graduated");
+    }
+
+    @Loggable
+    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
+    private void checkStatusCourseBranch(int branchId, UUID targetCourseId) {
+        if (!branchFeignClient.existsById(branchId)) throw new BranchNotFoundException(String.valueOf(branchId));
+        if (!courseFeignClient.existsById(targetCourseId)) throw new CourseNotFoundException(String.valueOf(branchId));
     }
 
     @Loggable

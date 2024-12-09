@@ -1,19 +1,20 @@
 package com.telran.groupservice.service;
 
-import com.telran.groupservice.error.DatabaseException.*;
-import com.telran.groupservice.error.Exception.*;
+import com.telran.groupservice.ThreeFunction;
 import com.telran.groupservice.dto.AddGroupDto;
 import com.telran.groupservice.dto.ChangeLecturersDto;
 import com.telran.groupservice.dto.PaginationGroupResponseDto;
-import com.telran.groupservice.feign.CourseClient;
+import com.telran.groupservice.error.DatabaseException.DatabaseAddingException;
+import com.telran.groupservice.error.DatabaseException.DatabaseDeletingException;
+import com.telran.groupservice.error.DatabaseException.DatabaseUpdatingException;
+import com.telran.groupservice.error.Exception.*;
 import com.telran.groupservice.feign.LecturerClient;
-import com.telran.groupservice.key.*;
+import com.telran.groupservice.key.ComposeStudentsKey;
 import com.telran.groupservice.logging.Loggable;
 import com.telran.groupservice.persistence.groups.*;
 import com.telran.groupservice.persistence.lecturers_by_group.*;
 import com.telran.groupservice.persistence.lessons_and_webinars_by_weekday.*;
 import com.telran.groupservice.persistence.students_by_group.*;
-import com.telran.groupservice.ThreeFunction;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -45,8 +46,9 @@ public class GroupService {
     private final LessonsByWeekdayRepository lessonsByWeekdayRepository;
     private final WebinarsByWeekdayRepository webinarsByWeekdayRepository;
 
-    private final CourseClient courseClient;
+
     private final LecturerClient lecturerClient;
+    private final GroupsRabbitProducer rabbitProducer;
 
     @Loggable
     public BaseGroup getById(UUID groupId) {
@@ -98,11 +100,30 @@ public class GroupService {
         }
     }
 
+    //    @Bean
+//    public RequestInterceptor customHeaderInterceptor() {
+//        return (RequestTemplate template) -> {
+//            ServletRequestAttributes attributes =
+//                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+//
+//            if (attributes != null) {
+//                String customId = attributes.getRequest().getHeader("X-Request-ID");
+//                if (customId != null) {
+//                    template.header("X-Request-Id", customId);
+//                }
+//            }
+//        };
+//    }
+
+
+
+
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(AddGroupDto groupData) {
-        if (!courseClient.existsById(groupData.getCourseId())) throw new CourseNotFoundException(String.valueOf(groupData.getCourseId()));
+        if (!rabbitProducer.sendCourseExists(groupData.getCourseId()))
+            throw new CourseNotFoundException(String.valueOf(groupData.getCourseId()));
         try {
             UUID groupId = repository.save(constructEntity(groupData)).getGroupId();
             addSmthByWeekdays(groupData.getLessons(), groupId, lessonsByWeekdayRepository, LessonsByWeekdayEntity::new);
@@ -344,13 +365,13 @@ public class GroupService {
                 try {
                     if (isCurrent)
                         repository.deleteGroupByGroupId(group.getGroupId());
-                     else
+                    else
                         archiveRepository.deleteGroupByGroupId(group.getGroupId());
-                    } catch(Exception e){
-                        throw new DatabaseUpdatingException(e.getMessage());
-                    }
+                } catch (Exception e) {
+                    throw new DatabaseUpdatingException(e.getMessage());
                 }
-            } else
+            }
+        } else
             throw new GroupNotFoundException(String.valueOf(studentId));
-        }
     }
+}

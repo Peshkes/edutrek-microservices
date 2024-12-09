@@ -48,11 +48,10 @@ public class NotificationService {
     @SuppressWarnings("unchecked")
     private <T extends AbstractNotificationDocument> INotificationsRepository<T> chooseRepository(EntityTypes entityType) {
         return switch (entityType) {
-            case CONTACT-> (INotificationsRepository<T>) contactNotificationsRepository;
+            case CONTACT -> (INotificationsRepository<T>) contactNotificationsRepository;
             case STUDENT -> (INotificationsRepository<T>) studentNotificationsRepository;
             case GROUP -> (INotificationsRepository<T>) groupNotificationsRepository;
             case LECTURER -> (INotificationsRepository<T>) lecturerNotificationsRepository;
-         //   default -> throw new WrongEntityTypeException(entityType);
         };
     }
 

@@ -58,8 +58,8 @@ public class LecturerController {
     }
 
     @GetMapping("exists/{id}")
-    public ResponseEntity<String> existsLecturerById(@PathVariable @UUID String id) {
+    public ResponseEntity<Boolean> existsLecturerById(@PathVariable @UUID String id) {
         boolean exists = lectureService.existsById(java.util.UUID.fromString(id));
-        return new ResponseEntity<>(String.valueOf(exists), HttpStatus.OK);
+        return new ResponseEntity<>(exists, HttpStatus.OK);
     }
 }
