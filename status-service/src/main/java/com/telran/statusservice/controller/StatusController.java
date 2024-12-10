@@ -57,7 +57,7 @@ public class StatusController {
     @GetMapping("/exists/{id}")
     @ResponseStatus(HttpStatus.OK)
     public boolean existsById(@PathVariable int id) {
-        return statusService.existById(id);
+        return statusService.existsById(id);
     }
 
     @GetMapping("/find_by_status_name/{status}")
