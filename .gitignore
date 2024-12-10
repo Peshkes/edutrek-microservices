@@ -31,5 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+rabbit_mq/data
+rabbit_mq/log
 
 server-data
