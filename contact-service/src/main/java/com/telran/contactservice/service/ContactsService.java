@@ -39,26 +39,22 @@ public class ContactsService {
 
     private final ContactsArchiveRepository contactArchiveRepository;
     private final ContactsRepository contactRepository;
-    private final StudentFeignClient studentFeignClient;
-    private final StatusFeignClient statusFeignClient;
-    private final BranchFeignClient branchFeignClient;
-    private final CourseFeignClient courseFeignClient;
-    private final LogFeignClient logFeignClient;
+    private final ContactRabbitProducer rabbitProducer;
     private static final boolean IS_CURRENT_STUDENT_REPOSITORY = true;
     private static final boolean IS_ARCHIVE_STUDENT_REPOSITORY = false;
 
     @Loggable
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public ContactSearchDto getAll(int page, int pageSize, String search, Integer statusId, UUID courseId) {
-        String statusName = statusId == null ? null : statusFeignClient.getStatusById(statusId).getStatusName();
+        String statusName = statusId == null ? null : rabbitProducer.sendGetStatusNameById(statusId);
         Pageable pageable = PageRequest.of(page, pageSize);
         if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
             List<AbstractContacts> foundContacts = findContactsAndStudents(pageable, search, statusId, courseId, contactArchiveRepository, IS_ARCHIVE_STUDENT_REPOSITORY, page, pageSize);
             return new ContactSearchDto(foundContacts, page, pageSize, foundContacts.size());
         } else if (statusName != null && statusName.equalsIgnoreCase("Student")) {
-            List<AbstractStudentDto> foundStudents = studentFeignClient.findStudents(new FindStudentsDto(pageable, search, statusId, null, courseId, true));
+            List<AbstractStudentDto> foundStudents = rabbitProducer.sendFindStudents(new FindStudentsDto(pageable, search, statusId, null, courseId, true));
             if (foundStudents.size() < pageSize) {
-                List<AbstractStudentDto> foundStudentArchive = studentFeignClient.findStudents(new FindStudentsDto(PageRequest.of(page, pageSize - foundStudents.size()), search, statusId, null, courseId, false));
+                List<AbstractStudentDto> foundStudentArchive = rabbitProducer.sendFindStudents(new FindStudentsDto(PageRequest.of(page, pageSize - foundStudents.size()), search, statusId, null, courseId, false));
                 if (!foundStudentArchive.isEmpty())
                     foundStudents.addAll(foundStudentArchive);
             }
@@ -95,7 +91,7 @@ public class ContactsService {
             try {
                 contactRepository.save(newEntity);
                 String log = contactData.getLogText();
-                logFeignClient.add(
+                rabbitProducer.sendAddLog(
                         newEntity.getContactId(),
                         log != null ? log : "New contact added. Status: " + properties.getStatusName() + ", course: " + properties.getCourseName() + ", branch: " + properties.getBranchName());
             } catch (Exception e) {
@@ -125,7 +121,7 @@ public class ContactsService {
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }
-        logFeignClient.deleteById(id);
+        rabbitProducer.sendDeleteLogById(id);
     }
 
     @Loggable
@@ -142,7 +138,7 @@ public class ContactsService {
         }
         String log = contactData.getLogText();
         if (!updates.isEmpty())
-            logFeignClient.add(id, log != null ? log : "Lecturer updated. Updated info: " + updates);
+            rabbitProducer.sendAddLog(id, log != null ? log : "Lecturer updated. Updated info: " + updates);
     }
 
     private <T extends AbstractContacts> List<String> updateEntity(ContactsDataDto contactData, T entity) {
@@ -198,7 +194,7 @@ public class ContactsService {
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void moveToArchiveById(UUID id, String reason) {
         ContactsEntity contact = contactRepository.findById(id).orElseThrow(() -> new ContactNotFoundException(id.toString()));
-        int statusId = statusFeignClient.findStatusEntityByStatusName("Archive").getStatusId();
+        int statusId = Integer.parseInt(rabbitProducer.sendGetStatusIdByName("Archive")); //TODO make method return int ????
         contact.setStatusId(statusId);
         ContactArchiveEntity contactArchEntity = new ContactArchiveEntity(contact, reason);
         try {
@@ -211,7 +207,7 @@ public class ContactsService {
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
-        logFeignClient.add(
+        rabbitProducer.sendAddLog(
                 id,
                 "Contact archived. Reason: " + reason);
     }
@@ -221,10 +217,10 @@ public class ContactsService {
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void promoteContactToStudentById(UUID id, @Valid StudentsFromContactDataDto studentData) {
         ContactsEntity contact = contactRepository.findById(id).orElseThrow(() -> new ContactNotFoundException(id.toString()));
-        if (!studentFeignClient.existsById(id)) {
-            contact.setStatusId(statusFeignClient.findStatusEntityByStatusName("Student").getStatusId());
+        if (!rabbitProducer.sendStudentExists(id)) {
+            contact.setStatusId(Integer.parseInt(rabbitProducer.sendGetStatusIdByName("Student")));//TODO make method return int ????
             try {
-                studentFeignClient.save(new StudentsDataDto(contact, studentData));
+                rabbitProducer.sendSaveStudent(new StudentsDataDto(contact, studentData));
             } catch (Exception e) {
                 throw new DatabaseAddingException(e.getMessage());
             }
@@ -233,17 +229,17 @@ public class ContactsService {
             } catch (Exception e) {
                 throw new DatabaseDeletingException(e.getMessage());
             }
-            logFeignClient.add(id, "Contact " + contact.getContactName() + " promoted to student" );
+            rabbitProducer.sendAddLog(id, "Contact " + contact.getContactName() + " promoted to student" );
         }
     }
 
     @Loggable
     private StatusCourseBranchNamesDto checkStatusCourseBranch(int branchId, UUID targetCourseId, int statusId) {
-        String branch = branchFeignClient.getNameById(branchId);
+        String branch = rabbitProducer.sendGetBranchNameById(branchId);
         if (branch == null) throw new BranchNotFoundException(String.valueOf(branchId));
-        String course = courseFeignClient.getNameById(targetCourseId);
+        String course = rabbitProducer.sendGetCourseNameById(targetCourseId);
         if (course == null) throw new CourseNotFoundException(String.valueOf(branchId));
-        String status = statusFeignClient.getNameById(statusId);
+        String status = rabbitProducer.sendGetStatusNameById(statusId);
         if (status == null) throw new StatusNotFoundException(statusId);
         return new StatusCourseBranchNamesDto(branch, course, status);
     }
@@ -268,7 +264,7 @@ public class ContactsService {
 
     @Loggable
     private void addStudents(String search, Integer statusId, UUID courseId, boolean isCurrentStudentRepository, int page, int pageSize, List<AbstractContacts> foundContact) {
-        List<AbstractStudentDto> foundStudents = studentFeignClient.findStudents(new FindStudentsDto(PageRequest.of(page, pageSize - foundContact.size()), search, statusId, null, courseId, isCurrentStudentRepository));
+        List<AbstractStudentDto> foundStudents = rabbitProducer.sendFindStudents(new FindStudentsDto(PageRequest.of(page, pageSize - foundContact.size()), search, statusId, null, courseId, isCurrentStudentRepository));
         if (!foundStudents.isEmpty()) {
             List<? extends AbstractContacts> contactFromStudents = foundStudents.stream().map(AbstractContacts::new).toList();
             foundContact.addAll(contactFromStudents);
