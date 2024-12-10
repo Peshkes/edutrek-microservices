@@ -1,14 +1,14 @@
 package com.telran.contactservice.logging;
 
-
-import org.aspectj.lang.JoinPoint;
+import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Arrays;
 
@@ -21,48 +21,57 @@ public class LoggingAspect {
     @Around("@annotation(Loggable)")
     public Object logExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
         long start = System.currentTimeMillis();
-
         try {
-            Object result = joinPoint.proceed();
-            long executionTime = System.currentTimeMillis() - start;
+            ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (requestAttributes != null) {
+                HttpServletRequest request = requestAttributes.getRequest();
+                String requestMethod = request.getMethod();
+                String requestURI = request.getRequestURI();
+                String requestId = request.getHeader("X-Request-Id");
 
-            logger.info("Method {} in {} executed in {} ms",
-                    joinPoint.getSignature().getName(),
-                    joinPoint.getTarget().getClass().getSimpleName(),
-                    executionTime);
+                logger.info("RequestId: {} - Method {} in {} started with arguments: {}. Request: {} {}",
+                        requestId,
+                        joinPoint.getSignature().getName(),
+                        joinPoint.getTarget().getClass().getSimpleName(),
+                        Arrays.toString(joinPoint.getArgs()),
+                        requestMethod, requestURI);
 
-            return result;
+                Object result = joinPoint.proceed();
+                long executionTime = System.currentTimeMillis() - start;
+
+                logger.info("RequestId: {} - Method {} in {} executed in {} ms. Request: {} {}",
+                        requestId,
+                        joinPoint.getSignature().getName(),
+                        joinPoint.getTarget().getClass().getSimpleName(),
+                        executionTime,
+                        requestMethod, requestURI);
+
+                return result;
+            }
+            return joinPoint.proceed();
         } catch (Throwable throwable) {
             long executionTime = System.currentTimeMillis() - start;
-            logger.error("Method {} in {} threw exception after {} ms: {}",
-                    joinPoint.getSignature().getName(),
-                    joinPoint.getTarget().getClass().getSimpleName(),
-                    executionTime,
-                    throwable.getMessage());
+            ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (requestAttributes != null) {
+                HttpServletRequest request = requestAttributes.getRequest();
+                String requestMethod = request.getMethod();
+                String requestURI = request.getRequestURI();
+                String requestId = request.getHeader("X-Request-Id");
+
+                logger.error("RequestId: {} - Method {} in {} threw exception after {} ms. Request: {} {}. Exception: {}",
+                        requestId,
+                        joinPoint.getSignature().getName(),
+                        joinPoint.getTarget().getClass().getSimpleName(),
+                        executionTime,
+                        requestMethod, requestURI,
+                        throwable.getMessage());
+            } else {
+                logger.error("Not HTTP request in {} threw exception after {} ms. Exception: {}",
+                        joinPoint.getTarget().getClass().getSimpleName(),
+                        executionTime,
+                        throwable.getMessage());
+            }
             throw throwable;
         }
     }
-
-    @Before("@annotation(Loggable)")
-    public void logBefore(JoinPoint joinPoint) {
-        logger.info("Method {} in {} started with arguments: {}",
-                joinPoint.getSignature().getName(),
-                joinPoint.getTarget().getClass().getSimpleName(),
-                Arrays.toString(joinPoint.getArgs()));
-    }
-
-//    @After("@annotation(Loggable)")
-//    public void logAfter(JoinPoint joinPoint) {
-//        logger.info("Method {} in {} finished",
-//                joinPoint.getSignature().getName(),
-//                joinPoint.getTarget().getClass().getSimpleName());
-//    }
-
-//    @AfterThrowing(pointcut = "@annotation(Loggable)", throwing = "exception")
-//    public void logAfterThrowing(JoinPoint joinPoint, Throwable exception) {
-//        logger.error("Exception in method {} in {}: {}",
-//                joinPoint.getSignature().getName(),
-//                joinPoint.getTarget().getClass().getSimpleName(),
-//                exception.getMessage());
-//    }
 }

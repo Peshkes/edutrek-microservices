@@ -1,0 +1,158 @@
+{
+  "users": [
+    {
+      "name": "admin",
+      "password_hash": "qOnIPN5CmA6FfTUM4VZid6AWljZHeoa0OskBo6qQ/7N4ILYZ",
+      "tags": "administrator"
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "admin",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "queues": [
+    {
+      "name": "branches_q",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "groups_q",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "lecturers_q",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "contacts_q",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "students_q",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "statuses_q",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "courses_q",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "logs_q",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "edutreck_direct_e",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "edutreck_direct_e",
+      "vhost": "/",
+      "destination": "groups_q",
+      "destination_type": "queue",
+      "routing_key": "groups_key",
+      "arguments": {}
+    },
+    {
+      "source": "edutreck_direct_e",
+      "vhost": "/",
+      "destination": "lecturers_q",
+      "destination_type": "queue",
+      "routing_key": "lecturers_key",
+      "arguments": {}
+    },
+    {
+      "source": "edutreck_direct_e",
+      "vhost": "/",
+      "destination": "contacts_q",
+      "destination_type": "queue",
+      "routing_key": "contacts_key",
+      "arguments": {}
+    },
+    {
+      "source": "edutreck_direct_e",
+      "vhost": "/",
+      "destination": "students_q",
+      "destination_type": "queue",
+      "routing_key": "students_key",
+      "arguments": {}
+    },
+    {
+      "source": "edutreck_direct_e",
+      "vhost": "/",
+      "destination": "branches_q",
+      "destination_type": "queue",
+      "routing_key": "branches_key",
+      "arguments": {}
+    },
+    {
+      "source": "edutreck_direct_e",
+      "vhost": "/",
+      "destination": "statuses_q",
+      "destination_type": "queue",
+      "routing_key": "statuses_key",
+      "arguments": {}
+    },
+    {
+      "source": "edutreck_direct_e",
+      "vhost": "/",
+      "destination": "courses_q",
+      "destination_type": "queue",
+      "routing_key": "courses_key",
+      "arguments": {}
+    },
+    {
+      "source": "edutreck_direct_e",
+      "vhost": "/",
+      "destination": "logs_q",
+      "destination_type": "queue",
+      "routing_key": "logs_key",
+      "arguments": {}
+    }
+  ]
+}

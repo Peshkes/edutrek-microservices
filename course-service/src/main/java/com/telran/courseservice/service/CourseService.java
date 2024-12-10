@@ -32,7 +32,7 @@ public class CourseService {
         return repository.findAll();
     }
 
-
+    @Loggable
     @Cacheable(key = "#courseId")
     public CourseEntity getById(UUID courseId) {
         return repository.findById(courseId).orElseThrow(() -> new CourseNotFoundException(String.valueOf(courseId)));
@@ -86,7 +86,7 @@ public class CourseService {
         }
     }
 
-
+    @Loggable
     @Cacheable(key = "'exist:' + #id")
     public boolean existsById(UUID id) {
         return repository.existsById(id);
