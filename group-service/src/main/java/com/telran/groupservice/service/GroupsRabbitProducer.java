@@ -22,7 +22,7 @@ public class GroupsRabbitProducer {
 
     private final RabbitTemplate rabbitTemplate;
 
-    public Boolean sendCourseExists(UUID courseId) {
+    public boolean sendCourseExists(UUID courseId) {
         return sendMessage("existsById", courseId, "courses_key", Boolean.class);
     }
 

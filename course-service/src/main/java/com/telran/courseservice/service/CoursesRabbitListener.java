@@ -13,21 +13,15 @@ import java.util.UUID;
 @Slf4j
 @RequiredArgsConstructor
 public class CoursesRabbitListener {
-    private final CourseService service;
-    //  ObjectMapper mapper = new ObjectMapper();
 
+    private final CourseService service;
 
     @RabbitListener(queues = "courses_q")
     RabbitMessageDto receiveMessage(RabbitMessageDto message) {
         UUID courseId = UUID.fromString((String) message.getPayload());
         String type = message.getType();
         String correlationId = message.getCorrelationId();
-        log.info(
-                "RequestId: {} - Method {} from RabbitMQ. Payload: {}",
-                correlationId,
-                type,
-                courseId
-        );
+        log.info("RequestId: {} - Method {} from RabbitMQ. Payload: {}", correlationId, type, courseId);
         message.setPayload(switch (message.getType()) {
             case "getEntityById" -> service.getById(courseId);
             case "getNameById" -> service.getById(courseId).getCourseName();
