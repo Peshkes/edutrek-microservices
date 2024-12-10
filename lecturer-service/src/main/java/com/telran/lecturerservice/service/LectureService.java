@@ -1,13 +1,13 @@
 package com.telran.lecturerservice.service;
 
+import com.telran.lecturerservice.dto.AddLogDto;
 import com.telran.lecturerservice.dto.LecturerDataDto;
 import com.telran.lecturerservice.dto.LecturerPaginationResponseDto;
 import com.telran.lecturerservice.error.BranchNotFoundException;
-import com.telran.lecturerservice.error.DatabaseException.*;
+import com.telran.lecturerservice.error.DatabaseException.DatabaseAddingException;
+import com.telran.lecturerservice.error.DatabaseException.DatabaseDeletingException;
 import com.telran.lecturerservice.error.LecturerNotFoundException;
-import com.telran.lecturerservice.feign.BranchClient;
 import com.telran.lecturerservice.feign.GroupClient;
-import com.telran.lecturerservice.feign.LogClient;
 import com.telran.lecturerservice.logging.Loggable;
 import com.telran.lecturerservice.persistence.*;
 import feign.FeignException;
@@ -32,8 +32,7 @@ public class LectureService {
     private final LecturerRepository repository;
     private final LecturerArchiveRepository archiveRepository;
     private final GroupClient groupClient;
-    private final LogClient logClient;
-    private final BranchClient branchClient;
+    private final LecturersRabbitProducer rabbitProducer;
 
     @Loggable
     public BaseLecturer getById(UUID id) {
@@ -66,8 +65,7 @@ public class LectureService {
             String branchName = getBranchName(data.getBranchId());
             UUID lecturerId = repository.save(new LecturerEntity(data.getLecturerName(), data.getPhone(), data.getEmail(), data.getBranchId(), data.getComment())).getLecturerId();
             String log = data.getLogText();
-            logClient.add(lecturerId,
-                    log != null ? log : "New lecturer added. Branch: " + branchName);
+            addLog(lecturerId, log != null ? log : "New lecturer added. Branch: " + branchName);
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
@@ -88,7 +86,7 @@ public class LectureService {
                 else
                     throw new LecturerNotFoundException(id.toString());
             }
-            logClient.deleteById(id);
+            rabbitProducer.deleteLog(id);
             return lecturer;
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
@@ -113,7 +111,7 @@ public class LectureService {
         List<String> updates = updateEntity(data, entity);
         String log = data.getLogText();
         if (!updates.isEmpty())
-            logClient.add(id, log != null ? log : "Lecturer updated. Updated info: " + updates);
+            addLog(id, log != null ? log : "Lecturer updated. Updated info: " + updates);
     }
 
     private <T extends BaseLecturer> List<String> updateEntity(LecturerDataDto data, T entity) {
@@ -159,7 +157,7 @@ public class LectureService {
             BaseLecturer lecturer = deleteById(uuid);
             try {
                 archiveRepository.save(new LecturerArchiveEntity(lecturer, reason));
-                logClient.add(uuid, "Lecturer archived. Reason: " + reason);
+                addLog(uuid, "Lecturer archived. Reason: " + reason);
             } catch (Exception e) {
                 throw new DatabaseAddingException(e.getMessage());
             }
@@ -172,13 +170,18 @@ public class LectureService {
     }
 
     private String getBranchName(int branchId) {
-        String branchName = branchClient.getNameById(branchId);
+        String branchName = rabbitProducer.sendGetBranchNameById(branchId);
         if (branchName == null) throw new BranchNotFoundException(String.valueOf(branchId));
         return branchName;
     }
 
     private void checkBranchExists(int branchId) {
-        boolean isExists = branchClient.existsById(branchId);
+        boolean isExists = rabbitProducer.sendBranchExists(branchId);
         if (!isExists) throw new BranchNotFoundException(String.valueOf(branchId));
+    }
+
+    private void addLog(UUID id, String log) {
+        AddLogDto logDto = new AddLogDto(id, log);
+        rabbitProducer.addLog(logDto);
     }
 }
