@@ -3,6 +3,7 @@ package com.telran.statusservice.service;
 import com.telran.statusservice.dto.StatusDataDto;
 import com.telran.statusservice.error.DatabaseException.*;
 import com.telran.statusservice.error.ShareException.*;
+import com.telran.statusservice.logging.Loggable;
 import com.telran.statusservice.persistence.StatusEntity;
 import com.telran.statusservice.persistence.StatusRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,19 +20,19 @@ public class  StatusService {
 
     private final StatusRepository repository;
 
-
+    @Loggable
     @Cacheable(key = "{'all'}")
     public List<StatusEntity> getAll() {
         return repository.findAll();
     }
 
-
+    @Loggable
     @Cacheable(key = "#id")
     public StatusEntity getById(int id) {
         return repository.findById(id).orElseThrow(() -> new StatusNotFoundException(id));
     }
 
-
+    @Loggable
     @Transactional
     @CacheEvict(key = "{'all'}")
     public void addEntity(StatusDataDto statusData) {
@@ -42,7 +43,7 @@ public class  StatusService {
         }
     }
 
-
+    @Loggable
     @Transactional
     @Caching(evict = {
             @CacheEvict(key = "#id"),
@@ -58,7 +59,7 @@ public class  StatusService {
         }
     }
 
-
+    @Loggable
     @Transactional
     @Caching(evict = {
             @CacheEvict(key = "#id"),
@@ -75,11 +76,13 @@ public class  StatusService {
         }
     }
 
+    @Loggable
     @Cacheable(key = "'exist:' + #id")
-    public boolean existById(int id) {
+    public boolean existsById(int id) {
         return repository.existsById(id);
     }
 
+    @Loggable
     //@Cacheable(key = "#status")
     public StatusEntity findStatusEntityByStatusName(String status) {
         return repository.findStatusEntityByStatusName(status);

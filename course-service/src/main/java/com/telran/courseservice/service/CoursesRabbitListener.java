@@ -30,9 +30,4 @@ public class CoursesRabbitListener {
         });
         return message;
     }
-
-//    private void modifyContext() {
-//        ServletRequestAttributes attributes = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes());
-//        log.error(String.valueOf(attributes));
-//    }
 }

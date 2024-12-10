@@ -56,6 +56,11 @@ public class GroupService {
     }
 
     @Loggable
+    public boolean existsById(UUID groupId) {
+        return repository.existsById(groupId) || archiveRepository.existsById(groupId);
+    }
+
+    @Loggable
     @SuppressWarnings("unchecked")
     public PaginationGroupResponseDto getAllPaginated(int page, int size, String courseId, Boolean isActive, String search) {
         Pageable pageable = PageRequest.of(page, size);
@@ -202,7 +207,7 @@ public class GroupService {
         if (groupData.getGroupName() != null) groupEntity.setGroupName(groupData.getGroupName());
         if (groupData.getFinishDate() != null) groupEntity.setFinishDate(groupData.getFinishDate());
         if (groupData.getIsActive() != null) groupEntity.setIsActive(groupData.getIsActive());
-        if (groupData.getCourseId() != null) groupEntity.setCourseId(groupData.getCourseId());
+        if (groupData.getCourseId() != null && !rabbitProducer.sendCourseExists(groupData.getCourseId())) groupEntity.setCourseId(groupData.getCourseId());
         if (groupData.getSlackLink() != null) groupEntity.setSlackLink(groupData.getSlackLink());
         if (groupData.getWhatsAppLink() != null) groupEntity.setWhatsAppLink(groupData.getWhatsAppLink());
         if (groupData.getSkypeLink() != null) groupEntity.setSkypeLink(groupData.getSkypeLink());
