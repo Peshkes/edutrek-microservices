@@ -31,4 +31,16 @@ public class Exceptions extends RuntimeException {
         }
     }
 
+    public static class TargetEntityNotFoundException extends Exceptions {
+        public TargetEntityNotFoundException(EntityTypes type, UUID id) {
+            super(String.format(TARGET_ENTITY_NOT_FOUND, type.toString(), id.toString()));
+        }
+    }
+
+    public static class UnsuccessfulRequest extends Exceptions {
+        public UnsuccessfulRequest(String message) {
+            super(RABBIT_REQUEST_FAILED + message);
+        }
+    }
+
 }

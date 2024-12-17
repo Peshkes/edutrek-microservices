@@ -19,7 +19,7 @@ public class LecturerDataDto {
 
     @NotNull(message = PHONE_MANDATORY)
     @NotBlank(message = PHONE_NOT_EMPTY)
-    @Pattern(regexp = "^(?:\\+972|0)([23489]|5[0-9])-?\\d{7}$",
+    @Pattern(regexp = "(\\+\\d{9,15})?",
             message = PHONE_INVALID_FORMAT)
     private String phone;
 

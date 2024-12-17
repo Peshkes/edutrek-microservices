@@ -3,6 +3,7 @@ package com.telran.groupservice.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.telran.groupservice.dto.CourseDto;
 import com.telran.groupservice.dto.RabbitMessageDto;
+import com.telran.groupservice.error.Exception.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -49,6 +50,10 @@ public class GroupsRabbitProducer {
         log.info("Request to RabbitMQ. RequestId: {} - Method: {} - Payload: {}", requestId, type, payload);
         messageDto = (RabbitMessageDto) rabbitTemplate.convertSendAndReceive("edutreck_direct_e", routingKey, messageDto);
         if (messageDto == null) throw new IllegalArgumentException("Response is null");
+        if (messageDto.getType().equals("error")) {
+            log.info("Response from RabbitMQ. RequestId: {} - Method: {} - Payload: {}", messageDto.getCorrelationId(), type, messageDto.getPayload());
+            throw new UnsuccessfulRequest(messageDto.getPayload().toString());
+        }
         Object result = messageDto.getPayload();
         log.info("Response from RabbitMQ. RequestId: {} - Method: {} - Payload: {}", requestId, type, messageDto.getPayload());
         if (responseType.isInstance(result))

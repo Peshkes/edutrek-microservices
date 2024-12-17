@@ -1,10 +1,10 @@
 package com.telran.contactservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.telran.contactservice.dto.AbstractStudentDto;
-import com.telran.contactservice.dto.FindStudentsDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telran.contactservice.dto.AddLogDto;
 import com.telran.contactservice.dto.RabbitMessageDto;
-import com.telran.contactservice.dto.StudentsDataDto;
+import com.telran.contactservice.error.Exception.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.util.List;
 import java.util.UUID;
 
 
@@ -30,8 +29,8 @@ public class ContactRabbitProducer {
         return sendMessage("getNameById", statusId, "statuses_key", String.class);
     }
 
-    public String sendGetStatusIdByName(String name) {
-        return sendMessage("getNameById", name, "statuses_key", String.class);
+    public int sendGetStatusIdByName(String name) {
+        return sendMessage("getIdByName", name, "statuses_key", Integer.class);
     }
 
     //Branches
@@ -46,46 +45,59 @@ public class ContactRabbitProducer {
 
     //Logs
     public void sendAddLog(UUID logId, String text) {
-        return sendMessage("existsById", statusId, "statuses_key", Boolean.class);
+        sendMessage("add", new AddLogDto(logId, text), "logs_key");
     }
 
     public void sendDeleteLogById(UUID logId) {
-        sendMessage("deleteById", logId, "logs_key", Boolean.class);
+        sendMessage("deleteById", logId, "logs_key");
     }
 
-    //Students
-    public boolean sendStudentExists(UUID studentId) {
-        return sendMessage("existsById", studentId, "students_key", Boolean.class);
-    }
 
-    //Students
-    public List<AbstractStudentDto> sendFindStudents(FindStudentsDto dto) {
-        return sendMessage("existsById", dto, "students_key", Boolean.class);
-    }
-
-    public AbstractStudentDto sendSaveStudent(StudentsDataDto studentsDataDto) {
-        return sendMessage("save", studentsDataDto, "students_key", Boolean.class);
-    }
-
-    private String getRequestId() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        String customId = null;
-        if (attributes != null)
-            customId = attributes.getRequest().getHeader("X-Request-ID");
-        return customId;
+    //Send message methods
+    @Retryable(retryFor = {JsonProcessingException.class}, backoff = @Backoff(delay = 50))
+    private <R> R sendMessage(String type, Object payload, String routingKey, Class<R> responseType) {
+        RabbitMessageDto messageDto = sendAndReceiveRabbitMessage(type, payload, routingKey);
+        Object result = messageDto.getPayload();
+        if (responseType.isInstance(result)) {
+            return responseType.cast(result);
+        }
+        throw new IllegalArgumentException("Unexpected response type: " + result.getClass().getName());
     }
 
     @Retryable(retryFor = {JsonProcessingException.class}, backoff = @Backoff(delay = 50))
-    private <R> R sendMessage(String type, Object payload, String routingKey, Class<R> responseType) {
+    private void sendMessage(String type, Object payload, String routingKey) {
+        RabbitMessageDto messageDto = prepareRabbitMessageDto(type, payload);
+        rabbitTemplate.convertAndSend("edutreck_direct_e", routingKey, messageDto);
+    }
+
+    //Utility methods
+    private String getRequestId() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        System.err.println(attributes);
+        String customId = null;
+        if (attributes != null)
+            customId = attributes.getRequest().getHeader("X-Request-ID");
+        System.err.println(customId);
+        return customId;
+    }
+
+    private RabbitMessageDto sendAndReceiveRabbitMessage(String type, Object payload, String routingKey) {
+        RabbitMessageDto messageDto = prepareRabbitMessageDto(type, payload);
+        messageDto = (RabbitMessageDto) rabbitTemplate.convertSendAndReceive("edutreck_direct_e", routingKey, messageDto);
+        if (messageDto == null) throw new IllegalArgumentException("Response is null");
+        if (messageDto.getType().equals("error")) {
+            log.info("Response from RabbitMQ. RequestId: {} - Method: {} - Payload: {}", messageDto.getCorrelationId(), type, messageDto.getPayload());
+            throw new UnsuccessfulRequest(messageDto.getPayload().toString());
+        }
+        log.info("Response from RabbitMQ. RequestId: {} - Method: {} - Payload: {}", messageDto.getCorrelationId(), type, messageDto.getPayload());
+        return messageDto;
+    }
+
+    private RabbitMessageDto prepareRabbitMessageDto(String type, Object payload) {
         String requestId = getRequestId();
         RabbitMessageDto messageDto = new RabbitMessageDto(type, payload, requestId);
         log.info("Request to RabbitMQ. RequestId: {} - Method: {} - Payload: {}", requestId, type, payload);
-        messageDto = (RabbitMessageDto) rabbitTemplate.convertSendAndReceive("edutreck_direct_e", routingKey, messageDto);
-        if (messageDto == null) throw new IllegalArgumentException("Response is null");
-        Object result = messageDto.getPayload();
-        log.info("Response from RabbitMQ. RequestId: {} - Method: {} - Payload: {}", requestId, type, messageDto.getPayload());
-        if (responseType.isInstance(result))
-            return responseType.cast(result);
-        throw new IllegalArgumentException("Unexpected response type: " + result.getClass().getName());
+        return messageDto;
     }
+
 }

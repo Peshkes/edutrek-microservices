@@ -20,12 +20,17 @@ public class StatusRabbitListener {
         String type = message.getType();
         String correlationId = message.getCorrelationId();
         log.info("RequestId: {} - Method {} from RabbitMQ. Payload: {}", correlationId, type, statusId);
-        message.setPayload(switch (message.getType()) {
-            case "getEntityById" -> service.getById(statusId);
-            case "getNameById" -> service.getById(statusId).getStatusName();
-            case "existsById" -> service.existsById(statusId);
-            default -> null;
-        });
+        try {
+            message.setPayload(switch (message.getType()) {
+                case "getIdByName" -> service.getById(statusId).getStatusId();
+                case "getNameById" -> service.getById(statusId).getStatusName();
+                case "existsById" -> service.existsById(statusId);
+                default -> null;
+            });
+        }catch (Exception e) {
+            message.setType("error");
+            message.setPayload(e.getMessage());
+        }
         return message;
     }
 }

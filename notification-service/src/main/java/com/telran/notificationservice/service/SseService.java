@@ -1,14 +1,15 @@
 package com.telran.notificationservice.service;
 
 
-import com.telran.notificationservice.dto.NotificationDataDto;
 import com.telran.notificationservice.persistence.contact_notifications.ContactNotificationsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 
 @Service
@@ -31,20 +32,17 @@ public class SseService {
     }
 
 
-    public void sendMessages(Map<UUID, List<NotificationDataDto>> mapOfDocs) {
-        if (clients.isEmpty()) return;
-        mapOfDocs.forEach((k, v) -> {
-            SseEmitter emitter = clients.get(k);
-            List<Integer> list = new LinkedList<>();
-            v.forEach(n -> {
-                try {
-                    emitter.send(n);
-                    list.add(n.getNotificationId());
-                } catch (IOException e) {
-                    emitter.completeWithError(e);
-                }
-                notificationsRepository.deleteNotificationDocumentsById(k, list.toArray(new Integer[0]));
-            });
-        });
+    public boolean sendMessages(Object message, UUID recipientId) {
+        if (clients.isEmpty()) return false;
+        SseEmitter emitter = clients.get(recipientId);
+        if (emitter == null) return false;
+        try {
+            emitter.send(message);
+            return true;
+        } catch (IOException e) {
+            emitter.completeWithError(e);
+            return false;
+        }
     }
+
 }

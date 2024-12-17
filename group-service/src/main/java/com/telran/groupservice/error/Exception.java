@@ -44,4 +44,10 @@ public class Exception extends RuntimeException {
             super(WEEKDAY_NOT_FOUND + weekdayId);
         }
     }
+    public static class UnsuccessfulRequest extends Exception {
+        public UnsuccessfulRequest(String message) {
+            super(RABBIT_REQUEST_FAILED + message);
+        }
+    }
+
 }

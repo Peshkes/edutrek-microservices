@@ -3,11 +3,10 @@ package com.telran.studentservice.service;
 import com.telran.studentservice.dto.*;
 import com.telran.studentservice.error.DatabaseException.DatabaseAddingException;
 import com.telran.studentservice.error.DatabaseException.DatabaseDeletingException;
-import com.telran.studentservice.error.Exceptions.BranchNotFoundException;
-import com.telran.studentservice.error.Exceptions.CourseNotFoundException;
-import com.telran.studentservice.error.Exceptions.StatusNotFoundException;
-import com.telran.studentservice.error.Exceptions.StudentNotFoundException;
-import com.telran.studentservice.feign.*;
+import com.telran.studentservice.error.Exceptions.*;
+import com.telran.studentservice.feign.ContactFeignClient;
+import com.telran.studentservice.feign.GroupFeignClient;
+import com.telran.studentservice.feign.PaymentsFeignClient;
 import com.telran.studentservice.logging.Loggable;
 import com.telran.studentservice.persistence.AbstractStudent;
 import com.telran.studentservice.persistence.archive.StudentsArchiveEntity;
@@ -15,6 +14,7 @@ import com.telran.studentservice.persistence.archive.StudentsArchiveRepository;
 import com.telran.studentservice.persistence.current.StudentEntity;
 import com.telran.studentservice.persistence.current.StudentsRepository;
 import feign.FeignException;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,7 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.telran.studentservice.persistence.StudentsFilterSpecifications.getStudentSpecifications;
 
@@ -38,19 +43,16 @@ public class StudentsService {
 
     private static final boolean IS_CURRENT_REPOSITORY = true;
     private final StudentsRepository repository;
-    private final ContactFeignClient contactFeignClient;
     private final StudentsArchiveRepository archiveRepository;
-    private final LogFeignClient logFeignClient;
-    private final StatusFeignClient statusFeignClient;
-    private final BranchFeignClient branchFeignClient;
-    private final CourseFeignClient courseFeignClient;
+    private final StudentRabbitProducer rabbitProducer;
+    private final ContactFeignClient contactFeignClient;
     private final PaymentsFeignClient paymentsFeignClient;
     private final GroupFeignClient groupFeignClient;
 
     @Loggable
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public StudentSearchDto getAll(int page, int pageSize, String search, Integer statusId, UUID groupId, UUID courseId) {
-        String statusName = statusId == null ? null : statusFeignClient.getStatusById(statusId).getStatusName();
+        String statusName = statusId == null ? null : rabbitProducer.sendGetStatusNameById(statusId);
         Pageable pageable = PageRequest.of(page, pageSize);
         List<AbstractStudent> foundStudents;
         if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
@@ -63,7 +65,13 @@ public class StudentsService {
                     foundStudents.addAll(foundStudentsArchive);
             }
         }
-        return new StudentSearchDto(foundStudents, page, pageSize, foundStudents.size());
+        Map<UUID, StudentWithGroupDto> foundStudentsMap = foundStudents.stream().collect(Collectors.toMap(AbstractStudent::getStudentId, StudentWithGroupDto::new));
+        List<GetStudentsByGroupDto> studentsByGroup = groupFeignClient.getStudentsByGroup(foundStudentsMap.keySet());
+        studentsByGroup.forEach(s -> {
+            UUID id = s.getStudentId();
+            foundStudentsMap.get(id).getGroups().add(new GroupsDto(s.getGroupId(), s.getIsActive(), s.getGroupName()));
+        });
+        return new StudentSearchDto(foundStudentsMap.values(), page, pageSize, foundStudents.size());
     }
 
     @Loggable
@@ -80,22 +88,20 @@ public class StudentsService {
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(StudentsDataDto studentData) {
-        StatusCourseBranchNamesDto properties = checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
-        if (!repository.existsByPhoneOrEmail(studentData.getPhone(), studentData.getEmail())) {
-            int statusId = statusFeignClient.findStatusEntityByStatusName("Student").getStatusId();
+        List<String> properties = checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
+        if(!properties.get(2).equals("Student")) throw new NotAStudentException();
+        if (!repository.existsByPhoneOrEmail(studentData.getPhone(), studentData.getEmail()) && !contactFeignClient.existsByPhoneOrEmail(studentData.getPhone(), studentData.getEmail())) {
             try {
-                AbstractStudent saved = repository.save(new StudentEntity(
-                        studentData, statusId));
+                AbstractStudent saved = repository.save(new StudentEntity(studentData));
                 String log = studentData.getLogText();
-                logFeignClient.add(
+                rabbitProducer.sendAddLog(
                         saved.getStudentId(),
-                        log != null ? log : " - New contact added. Status: " + properties.getStatusName() + ", course: " + properties.getCourseName() + ", branch: " + properties.getBranchName());
+                        log != null ? log : " - New contact added. Status: " + properties.get(0) + ", course: " + properties.get(1) + ", branch: " + properties.get(2));
             } catch (Exception e) {
                 throw new DatabaseAddingException(e.getMessage());
             }
-
-            contactFeignClient.findByPhoneOrEmailAndDelete(studentData.getPhone(), studentData.getEmail());
-        }
+        }else
+            throw new StudentOrContactAlreadyExistsException();
     }
 
     @Loggable
@@ -123,7 +129,7 @@ public class StudentsService {
                 throw new DatabaseDeletingException(e.getMessage());
             }
         }
-        logFeignClient.deleteById(id);
+        rabbitProducer.sendDeleteLogById(id);
     }
 
     @Loggable
@@ -134,7 +140,7 @@ public class StudentsService {
         AbstractStudent entity = repository.getByStudentId(id).or(() -> archiveRepository.findById(id)).orElseThrow(() -> new StudentNotFoundException(id.toString()));
         List<String> updates = updateEntity(studentData, entity);
         String log = studentData.getLogText();
-        logFeignClient.add(
+        rabbitProducer.sendAddLog(
                 id,
                 log != null ? log : " - Contact updated. Updated info: " + updates);
     }
@@ -198,7 +204,7 @@ public class StudentsService {
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void moveToArchiveById(UUID id, String reason) {
         StudentEntity student = repository.findById(id).orElseThrow(() -> new StudentNotFoundException(id.toString()));
-        int statusId = statusFeignClient.findStatusEntityByStatusName("Archive").getStatusId();
+        int statusId = Integer.parseInt(rabbitProducer.sendGetStatusIdByName("Archive"));
         student.setStatusId(statusId);
         StudentsArchiveEntity studentArchEntity = new StudentsArchiveEntity(student, reason);
         try {
@@ -213,7 +219,7 @@ public class StudentsService {
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }
-        logFeignClient.add(
+        rabbitProducer.sendAddLog(
                 id,
                 "Student archived. Reason: " + reason);
     }
@@ -224,23 +230,77 @@ public class StudentsService {
         moveToArchiveById(id, "Finished course and graduated");
     }
 
-    @Loggable
-    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    private void checkStatusCourseBranch(int branchId, UUID targetCourseId) {
-        if (!branchFeignClient.existsById(branchId)) throw new BranchNotFoundException(String.valueOf(branchId));
-        if (!courseFeignClient.existsById(targetCourseId)) throw new CourseNotFoundException(String.valueOf(branchId));
+    private void checkStatusCourseBranch(Integer branchId, UUID targetCourseId) {
+        //CompletableFuture<Void> resultFuture = new CompletableFuture<>();
+        List<CompletableFuture<Boolean>> list = new ArrayList<>();
+        if (branchId != null) {
+            list.add(CompletableFuture.supplyAsync(() -> rabbitProducer.sendCourseExists(targetCourseId)));
+        }
+        if (branchId != null) {
+            list.add(CompletableFuture.supplyAsync(() -> rabbitProducer.sendBranchExists(branchId)));
+        }
+        try {
+            CompletableFuture.allOf(list.toArray(new CompletableFuture[0]))
+                    .thenApply(v -> list.stream().map(CompletableFuture::join).toList()).get().forEach(item -> {
+                        if (!item) throw new EntityNotFoundException();
+                    });
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error extracting data", e);
+        }
     }
 
+//    public class CancelableFuture {
+//
+//        public static CompletableFuture<Void> allTrueOrCancel(List<CompletableFuture<Boolean>> futures) {
+//            CompletableFuture<Void> resultFuture = new CompletableFuture<>();
+//
+//            futures.forEach(future ->
+//                    future.thenAccept(result -> {
+//                        if (!result) {
+//                            // Отмена всех фьючеров и завершение с ошибкой
+//                            futures.forEach(f -> f.cancel(true));
+//                            resultFuture.completeExceptionally(new RuntimeException("One of the tasks returned false."));
+//                        }
+//                    }).exceptionally(e -> {
+//                        // Завершаем результат с ошибкой, если один из фьючеров упал
+//                        resultFuture.completeExceptionally(e);
+//                        return null;
+//                    })
+//            );
+//
+//            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+//                    .thenAccept(v -> {
+//                        // Завершаем результат, если все фьючеры вернули true
+//                        if (!resultFuture.isDone()) {
+//                            resultFuture.complete(null);
+//                        }
+//                    });
+//
+//            return resultFuture;
+//        }
+//    }
+
     @Loggable
-    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    private StatusCourseBranchNamesDto checkStatusCourseBranch(int branchId, UUID targetCourseId, int statusId) {
-        String branch = branchFeignClient.getNameById(branchId);
-        if (branch == null) throw new BranchNotFoundException(String.valueOf(branchId));
-        String course = courseFeignClient.getNameById(targetCourseId);
-        if (course == null) throw new CourseNotFoundException(String.valueOf(branchId));
-        String status = statusFeignClient.getNameById(statusId);
-        if (status == null) throw new StatusNotFoundException(statusId);
-        return new StatusCourseBranchNamesDto(branch, course, status);
+    private List<String> checkStatusCourseBranch(Integer branchId, UUID targetCourseId, Integer statusId) {
+        List<CompletableFuture<String>> list = new ArrayList<>();
+        createFuture(branchId, list, rabbitProducer::sendGetBranchNameById);
+        createFuture(targetCourseId, list, rabbitProducer::sendGetCourseNameById);
+        createFuture(statusId, list, rabbitProducer::sendGetStatusNameById);
+
+        try {
+            return CompletableFuture.allOf(list.toArray(new CompletableFuture[0]))
+                    .thenApply(v -> list.stream().map(CompletableFuture::join).toList()).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error extracting data", e);
+        }
+    }
+
+    private <T> void createFuture(T id, List<CompletableFuture<String>> list, Function<T, String> getFunction) {
+        list.add(CompletableFuture.supplyAsync(() -> {
+            String entity = getFunction.apply(id);
+            if (entity == null) throw new EntityNotFoundException(String.valueOf(id));
+            return entity;
+        }));
     }
 
     @Loggable
@@ -253,7 +313,7 @@ public class StudentsService {
 
     public AbstractStudent findByPhoneOrEmailAndDelete(String phone, String email) {
         try {
-            return repository.deleteByPhoneOrEmail(phone, email);
+            return repository.deleteByPhoneAndEmail(phone, email);
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }

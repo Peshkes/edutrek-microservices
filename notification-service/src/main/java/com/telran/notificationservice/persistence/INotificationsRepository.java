@@ -26,7 +26,7 @@ public interface INotificationsRepository<T extends AbstractNotificationDocument
     @Query("{ 'notificationData.scheduledTime': { '$lt': ?0 } }")
     List<AbstractNotificationDocument> findByScheduledTimeBefore(LocalDateTime time);
 
-    @DeleteQuery("{ 'notificationData': { '$size': 0 } }")
-    void deleteByIdIfNotificationDataIsEmpty();
+    @DeleteQuery("{ '_id': ?0, 'notificationData': { '$size': 0 } }")
+    void deleteByIdIfNotificationDataIsEmpty(UUID id);
 
 }

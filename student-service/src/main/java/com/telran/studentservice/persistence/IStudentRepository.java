@@ -12,6 +12,5 @@ import java.util.UUID;
 public interface IStudentRepository<T extends AbstractStudent> extends JpaRepository<T, UUID>, JpaSpecificationExecutor<T> {
     Optional<AbstractStudent> getByStudentId(UUID id);
     boolean existsByPhoneOrEmail(String phone, String email);
-    AbstractStudent deleteByPhoneOrEmail(String phone, String email);
-
+    AbstractStudent deleteByPhoneAndEmail(String phone, String email);
 }

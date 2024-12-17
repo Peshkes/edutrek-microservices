@@ -42,13 +42,18 @@ public class ContactsController {
         return contactsService.getById(id);
     }
 
-    @GetMapping("/exists/{phone}/{email}")
+    @GetMapping("/find/{phone}/{email}")
     @ResponseStatus(HttpStatus.OK)
     public AbstractContacts findByPhoneOrEmail(@PathVariable String phone, @PathVariable String email) {
         return contactsService.findByPhoneOrEmail(phone, email);
     }
+    @GetMapping("/exists/{phone}/{email}")
+    @ResponseStatus(HttpStatus.OK)
+    public boolean existsByPhoneOrEmail(@PathVariable String phone, @PathVariable String email) {
+        return contactsService.existsByPhoneOrEmail(phone, email);
+    }
 
-    @GetMapping("/find/{phone}/{email}")
+    @DeleteMapping("/{phone}/{email}")
     @ResponseStatus(HttpStatus.OK)
     public AbstractContacts findByPhoneOrEmailAndDelete(@PathVariable String phone, @PathVariable String email) {
         return contactsService.findByPhoneOrEmailAndDelete(phone, email);

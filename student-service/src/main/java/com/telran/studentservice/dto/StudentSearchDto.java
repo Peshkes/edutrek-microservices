@@ -1,6 +1,5 @@
 package com.telran.studentservice.dto;
-import com.telran.studentservice.persistence.AbstractStudent;
 
-import java.util.List;
+import java.util.Collection;
 
-public record StudentSearchDto(List<AbstractStudent> students, int page, int pageSIze, long totalItems) {}
+public record StudentSearchDto(Collection<StudentWithGroupDto> students, int page, int pageSIze, long totalItems) {}

@@ -24,8 +24,8 @@ public class ErrorController {
         return returnResponse(e.getMessage(), HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(LecturerNotFoundException.class)
-    ResponseEntity<String> lecturerNotFoundExceptionHandler(LecturerNotFoundException e) {
+    @ExceptionHandler(Exception.class)
+    ResponseEntity<String> lecturerNotFoundExceptionHandler(Exception e) {
         return returnResponse(e.getMessage(), HttpStatus.NOT_FOUND);
     }
 
@@ -65,6 +65,11 @@ public class ErrorController {
 
     @ExceptionHandler(ConstraintViolationException.class)
     ResponseEntity<String> constraintViolationException(ConstraintViolationException e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.UnsuccessfulRequest.class)
+    ResponseEntity<String> unsuccessfulRequest(Exception.UnsuccessfulRequest e) {
         return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 

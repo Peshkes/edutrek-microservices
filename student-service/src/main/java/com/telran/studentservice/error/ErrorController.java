@@ -22,15 +22,6 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 public class ErrorController {
 
-
-
-
-
-
-
-
-
-
     @ExceptionHandler(Exceptions.CourseNotFoundException.class)
     ResponseEntity<String> courseNotFoundExceptionHandler(CourseNotFoundException e) {
         return returnResponse(e.getMessage(), HttpStatus.NOT_FOUND);
@@ -88,6 +79,21 @@ public class ErrorController {
 
     @ExceptionHandler(StudentNotFoundException.class)
     ResponseEntity<String> studentNotFoundException(StudentNotFoundException e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(UnsuccessfulRequest.class)
+    ResponseEntity<String> unsuccessfulRequest(UnsuccessfulRequest e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(NotAStudentException.class)
+    ResponseEntity<String> notAStudentException(NotAStudentException e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(StudentOrContactAlreadyExistsException.class)
+    ResponseEntity<String> studentOrContactAlreadyExistsException(StudentOrContactAlreadyExistsException e) {
         return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 

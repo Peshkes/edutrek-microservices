@@ -1,9 +1,7 @@
 package com.telran.groupservice.service;
 
 import com.telran.groupservice.ThreeFunction;
-import com.telran.groupservice.dto.AddGroupDto;
-import com.telran.groupservice.dto.ChangeLecturersDto;
-import com.telran.groupservice.dto.PaginationGroupResponseDto;
+import com.telran.groupservice.dto.*;
 import com.telran.groupservice.error.DatabaseException.DatabaseAddingException;
 import com.telran.groupservice.error.DatabaseException.DatabaseDeletingException;
 import com.telran.groupservice.error.DatabaseException.DatabaseUpdatingException;
@@ -30,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiFunction;
 
@@ -53,6 +52,11 @@ public class GroupService {
     @Loggable
     public BaseGroup getById(UUID groupId) {
         return repository.getGroupByGroupId(groupId).or(() -> archiveRepository.getGroupByGroupId(groupId)).orElseThrow(() -> new GroupNotFoundException(groupId.toString()));
+    }
+
+    @Loggable
+    public List<GetStudentsByGroupDto> getStudentsByGroup(Set<UUID> ids) {
+        return studentsByGroupRepository.findGroupsByStudentIds(ids);
     }
 
     @Loggable
