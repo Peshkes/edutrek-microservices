@@ -22,11 +22,16 @@ public class GroupsRabbitListener {
         String type = message.getType();
         String correlationId = message.getCorrelationId();
         log.info("RequestId: {} - Method {} from RabbitMQ. Payload: {}", correlationId, type, groupId);
-        message.setPayload(switch (message.getType()) {
-            case "getEntityById" -> service.getById(groupId);
-            case "existsById" -> service.existsById(groupId);
-            default -> null;
-        });
+        try {
+            message.setPayload(switch (message.getType()) {
+                case "getEntityById" -> service.getById(groupId);
+                case "existsById" -> service.existsById(groupId);
+                default -> null;
+            });
+        } catch (Exception e) {
+            message.setType("error");
+            message.setPayload(e.getMessage());
+        }
         return message;
     }
 }

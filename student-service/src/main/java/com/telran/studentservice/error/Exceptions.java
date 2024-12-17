@@ -32,4 +32,22 @@ public class Exceptions extends RuntimeException {
             super(STUDENT_NOT_FOUND + message);
         }
     }
+
+    public static class UnsuccessfulRequest extends Exceptions {
+        public UnsuccessfulRequest(String message) {
+            super(RABBIT_REQUEST_FAILED + message);
+        }
+    }
+
+    public static class NotAStudentException extends Exceptions {
+        public NotAStudentException() {
+            super(NOT_A_STUDENT_STATUS);
+        }
+    }
+
+    public static class StudentOrContactAlreadyExistsException extends Exceptions {
+        public StudentOrContactAlreadyExistsException() {
+            super(STUDENT_OR_CONTACT_ALREADY_EXISTS);
+        }
+    }
 }

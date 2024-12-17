@@ -22,11 +22,16 @@ public class LecturersRabbitListener {
         String type = message.getType();
         String correlationId = message.getCorrelationId();
         log.info("RequestId: {} - Method {} from RabbitMQ. Payload: {}", correlationId, type, lecturerId);
-        message.setPayload(switch (message.getType()) {
-            case "getEntityById" -> service.getById(lecturerId);
-            case "existsById" -> service.existsById(lecturerId);
-            default -> null;
-        });
+        try {
+            message.setPayload(switch (message.getType()) {
+                case "getEntityById" -> service.getById(lecturerId);
+                case "existsById" -> service.existsById(lecturerId);
+                default -> null;
+            });
+        } catch (Exception e) {
+            message.setType("error");
+            message.setPayload(e.getMessage());
+        }
         return message;
     }
 }

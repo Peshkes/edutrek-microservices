@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+
 import static com.telran.notificationservice.error.Exceptions.*;
 
 
@@ -25,6 +26,16 @@ public class ErrorController {
 
     @ExceptionHandler(WrongEntityTypeException.class)
     ResponseEntity<String> wrongEntityTypeException(WrongEntityTypeException e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(UnsuccessfulRequest.class)
+    ResponseEntity<String> unsuccessfulRequest(UnsuccessfulRequest e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(TargetEntityNotFoundException.class)
+    ResponseEntity<String> targetEntityNotFoundException(TargetEntityNotFoundException e) {
         return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 

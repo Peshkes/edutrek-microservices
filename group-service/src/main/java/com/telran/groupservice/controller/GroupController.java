@@ -2,6 +2,7 @@ package com.telran.groupservice.controller;
 
 import com.telran.groupservice.dto.AddGroupDto;
 import com.telran.groupservice.dto.ChangeLecturersDto;
+import com.telran.groupservice.dto.GetStudentsByGroupDto;
 import com.telran.groupservice.dto.PaginationGroupResponseDto;
 import com.telran.groupservice.persistence.groups.BaseGroup;
 import com.telran.groupservice.service.GroupService;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/groups")
@@ -38,6 +40,13 @@ public class GroupController {
     ) {
         return groupService.getAllPaginated(page, limit, filter_course, filter_is_active, search);
     }
+
+    @GetMapping("/groups/students")
+    @ResponseStatus(HttpStatus.OK)
+    public List<GetStudentsByGroupDto> getStudentsByGroup(@RequestBody @UUID Set<java.util.UUID> ids) {
+        return groupService.getStudentsByGroup(ids);
+    }
+
 
     @PostMapping("")
     public ResponseEntity<String> addNewGroup(@RequestBody @Valid AddGroupDto groupData) {

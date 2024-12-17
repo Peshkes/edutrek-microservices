@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Data
 @NoArgsConstructor
-@Document("notifications")
+@Document("contact_notifications")
 @EqualsAndHashCode(callSuper = true)
 public class ContactNotificationDocument extends AbstractNotificationDocument {
 

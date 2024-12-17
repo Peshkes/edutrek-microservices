@@ -19,4 +19,5 @@ public interface ContactsRepository extends IContactRepository<ContactsEntity>,J
     @Transactional
     @Query(value = "DELETE FROM current.contacts WHERE contact_id = :id", nativeQuery = true)
     void deleteContactById(UUID id);
+    boolean existsByPhoneOrEmail(String phone, String email);
 }

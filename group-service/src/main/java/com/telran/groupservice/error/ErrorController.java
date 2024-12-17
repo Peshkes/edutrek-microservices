@@ -85,6 +85,11 @@ public class ErrorController {
         return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(UnsuccessfulRequest.class)
+    ResponseEntity<String> unsuccessfulRequest(UnsuccessfulRequest e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
     private ResponseEntity<String> returnResponse(String message, HttpStatus status) {
         log.error(message);
         return new ResponseEntity<>(message, status);

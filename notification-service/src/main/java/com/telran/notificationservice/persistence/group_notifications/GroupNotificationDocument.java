@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Data
 @NoArgsConstructor
-@Document("notifications")
+@Document("group_notifications")
 @EqualsAndHashCode(callSuper = true)
 public class GroupNotificationDocument extends AbstractNotificationDocument {
 

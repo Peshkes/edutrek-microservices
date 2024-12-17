@@ -51,12 +51,12 @@ public abstract class AbstractStudent {
         this.documentsDone = documentsDone;
     }
 
-    public AbstractStudent(StudentsDataDto studentsDataDto, int statusId) {
+    public AbstractStudent(StudentsDataDto studentsDataDto) {
         this.studentId = UUID.randomUUID();
         this.contactName = studentsDataDto.getContactName();
         this.phone = studentsDataDto.getPhone();
         this.email = studentsDataDto.getEmail();
-        this.statusId = statusId;
+        this.statusId = studentsDataDto.getStatusId();
         this.branchId = studentsDataDto.getBranchId();
         this.targetCourseId = studentsDataDto.getTargetCourseId();
         this.comment = studentsDataDto.getComment();

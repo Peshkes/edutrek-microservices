@@ -39,6 +39,15 @@ public class Exception extends RuntimeException {
         }
     }
 
+    public static class UnsuccessfulRequest extends Exception {
+        public UnsuccessfulRequest(String message) {
+            super(RABBIT_REQUEST_FAILED + message);
+        }
+    }
 
-
+    public static class StudentOrContactAlreadyExistsException extends Exception {
+        public StudentOrContactAlreadyExistsException() {
+            super(STUDENT_OR_CONTACT_ALREADY_EXISTS);
+        }
+    }
 }

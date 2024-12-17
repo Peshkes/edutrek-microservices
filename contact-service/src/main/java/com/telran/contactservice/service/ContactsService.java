@@ -3,8 +3,9 @@ package com.telran.contactservice.service;
 import com.telran.contactservice.dto.*;
 import com.telran.contactservice.error.DatabaseException.DatabaseAddingException;
 import com.telran.contactservice.error.DatabaseException.DatabaseDeletingException;
-import com.telran.contactservice.error.Exception.*;
-import com.telran.contactservice.feign.*;
+import com.telran.contactservice.error.Exception.ContactAlreadyExistsException;
+import com.telran.contactservice.error.Exception.ContactNotFoundException;
+import com.telran.contactservice.feign.StudentFeignClient;
 import com.telran.contactservice.logging.Loggable;
 import com.telran.contactservice.persistence.AbstractContacts;
 import com.telran.contactservice.persistence.ContactsFilterSpecifications;
@@ -14,6 +15,7 @@ import com.telran.contactservice.persistence.archive.ContactsArchiveRepository;
 import com.telran.contactservice.persistence.current.ContactsEntity;
 import com.telran.contactservice.persistence.current.ContactsRepository;
 import feign.FeignException;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
@@ -37,20 +42,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ContactsService {
 
-    private final ContactsArchiveRepository contactArchiveRepository;
     private final ContactsRepository contactRepository;
+    private final ContactsArchiveRepository contactArchiveRepository;
+    private final ContactRabbitProducer rabbitProducer;
     private final StudentFeignClient studentFeignClient;
-    private final StatusFeignClient statusFeignClient;
-    private final BranchFeignClient branchFeignClient;
-    private final CourseFeignClient courseFeignClient;
-    private final LogFeignClient logFeignClient;
     private static final boolean IS_CURRENT_STUDENT_REPOSITORY = true;
     private static final boolean IS_ARCHIVE_STUDENT_REPOSITORY = false;
 
     @Loggable
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public ContactSearchDto getAll(int page, int pageSize, String search, Integer statusId, UUID courseId) {
-        String statusName = statusId == null ? null : statusFeignClient.getStatusById(statusId).getStatusName();
+        String statusName = statusId == null ? null : rabbitProducer.sendGetStatusNameById(statusId);
         Pageable pageable = PageRequest.of(page, pageSize);
         if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
             List<AbstractContacts> foundContacts = findContactsAndStudents(pageable, search, statusId, courseId, contactArchiveRepository, IS_ARCHIVE_STUDENT_REPOSITORY, page, pageSize);
@@ -82,22 +84,30 @@ public class ContactsService {
         return contactRepository.getByContactId(id).or(() -> contactArchiveRepository.findById(id)).orElseThrow(() -> new ContactNotFoundException(id.toString()));
     }
 
+    public boolean existsById(UUID id) {
+        return contactRepository.existsById(id);
+    }
+
     public AbstractContacts findByPhoneOrEmail(String phone, String email) {
         return contactRepository.findByPhoneOrEmail(phone, email).orElseThrow(() -> new ContactNotFoundException(email));
+    }
+
+    public boolean existsByPhoneOrEmail(String phone, String email) {
+        return contactRepository.existsByPhoneOrEmail(phone, email);
     }
 
     @Loggable
     @Transactional
     public void addEntity(ContactsDataDto contactData) {
-        StatusCourseBranchNamesDto properties = checkStatusCourseBranch(contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getStatusId());
+        List<String> properties = checkStatusCourseBranch(contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getStatusId());
         if (!contactRepository.existsByPhoneOrEmail(contactData.getPhone(), contactData.getEmail())) {
             ContactsEntity newEntity = new ContactsEntity(contactData.getContactName(), contactData.getPhone(), contactData.getEmail(), contactData.getStatusId(), contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getComment());
             try {
                 contactRepository.save(newEntity);
                 String log = contactData.getLogText();
-                logFeignClient.add(
+                rabbitProducer.sendAddLog(
                         newEntity.getContactId(),
-                        log != null ? log : "New contact added. Status: " + properties.getStatusName() + ", course: " + properties.getCourseName() + ", branch: " + properties.getBranchName());
+                        log != null ? log : "New contact added. Status: " + properties.get(0) + ", course: " + properties.get(1) + ", branch: " + properties.get(2));
             } catch (Exception e) {
                 throw new DatabaseAddingException(e.getMessage());
             }
@@ -125,24 +135,23 @@ public class ContactsService {
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }
-        logFeignClient.deleteById(id);
+        rabbitProducer.sendDeleteLogById(id);
     }
 
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void updateById(UUID id, @Valid ContactsDataDto contactData) {
-        StatusCourseBranchNamesDto properties = checkStatusCourseBranch(contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getStatusId());
+        List<String> properties = checkStatusCourseBranch(contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getStatusId());
         AbstractContacts entity = contactRepository.getByContactId(id).or(() -> contactArchiveRepository.findById(id)).orElseThrow(() -> new ContactNotFoundException(id.toString()));
-        String statusName = properties.getStatusName();
         List<String> updates = updateEntity(contactData, entity);
-        if (entity instanceof ContactArchiveEntity && !statusName.equals("Archive")) {
+        if (entity.getStatusId() != contactData.getStatusId() && entity instanceof ContactArchiveEntity ) {
             contactArchiveRepository.deleteById(id);
             contactRepository.save(new ContactsEntity(entity));
         }
         String log = contactData.getLogText();
         if (!updates.isEmpty())
-            logFeignClient.add(id, log != null ? log : "Lecturer updated. Updated info: " + updates);
+            rabbitProducer.sendAddLog(id, log != null ? log : "Contact updated. Updated info: " + updates);
     }
 
     private <T extends AbstractContacts> List<String> updateEntity(ContactsDataDto contactData, T entity) {
@@ -198,7 +207,7 @@ public class ContactsService {
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void moveToArchiveById(UUID id, String reason) {
         ContactsEntity contact = contactRepository.findById(id).orElseThrow(() -> new ContactNotFoundException(id.toString()));
-        int statusId = statusFeignClient.findStatusEntityByStatusName("Archive").getStatusId();
+        int statusId = rabbitProducer.sendGetStatusIdByName("Archive");
         contact.setStatusId(statusId);
         ContactArchiveEntity contactArchEntity = new ContactArchiveEntity(contact, reason);
         try {
@@ -211,7 +220,7 @@ public class ContactsService {
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
-        logFeignClient.add(
+        rabbitProducer.sendAddLog(
                 id,
                 "Contact archived. Reason: " + reason);
     }
@@ -222,7 +231,7 @@ public class ContactsService {
     public void promoteContactToStudentById(UUID id, @Valid StudentsFromContactDataDto studentData) {
         ContactsEntity contact = contactRepository.findById(id).orElseThrow(() -> new ContactNotFoundException(id.toString()));
         if (!studentFeignClient.existsById(id)) {
-            contact.setStatusId(statusFeignClient.findStatusEntityByStatusName("Student").getStatusId());
+            contact.setStatusId(rabbitProducer.sendGetStatusIdByName("Student"));
             try {
                 studentFeignClient.save(new StudentsDataDto(contact, studentData));
             } catch (Exception e) {
@@ -233,19 +242,31 @@ public class ContactsService {
             } catch (Exception e) {
                 throw new DatabaseDeletingException(e.getMessage());
             }
-            logFeignClient.add(id, "Contact " + contact.getContactName() + " promoted to student" );
+            rabbitProducer.sendAddLog(id, "Contact " + contact.getContactName() + " promoted to student");
         }
     }
 
     @Loggable
-    private StatusCourseBranchNamesDto checkStatusCourseBranch(int branchId, UUID targetCourseId, int statusId) {
-        String branch = branchFeignClient.getNameById(branchId);
-        if (branch == null) throw new BranchNotFoundException(String.valueOf(branchId));
-        String course = courseFeignClient.getNameById(targetCourseId);
-        if (course == null) throw new CourseNotFoundException(String.valueOf(branchId));
-        String status = statusFeignClient.getNameById(statusId);
-        if (status == null) throw new StatusNotFoundException(statusId);
-        return new StatusCourseBranchNamesDto(branch, course, status);
+    private List<String> checkStatusCourseBranch(Integer branchId, UUID targetCourseId, Integer statusId) {
+        List<CompletableFuture<String>> list = new ArrayList<>();
+        if (branchId != null) createFuture(branchId, list, rabbitProducer::sendGetBranchNameById);
+        if (targetCourseId != null) createFuture(targetCourseId, list, rabbitProducer::sendGetCourseNameById);
+        if (statusId != null) createFuture(statusId, list, rabbitProducer::sendGetStatusNameById);
+
+        try {
+            return CompletableFuture.allOf(list.toArray(new CompletableFuture[0]))
+                    .thenApply(v -> list.stream().map(CompletableFuture::join).toList()).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error extracting data", e);
+        }
+    }
+
+    private <T> void createFuture(T id, List<CompletableFuture<String>> list, Function<T, String> getFunction) {
+        list.add(CompletableFuture.supplyAsync(() -> {
+            String entity = getFunction.apply(id);
+            if (entity == null) throw new EntityNotFoundException(String.valueOf(id));
+            return entity;
+        }));
     }
 
 

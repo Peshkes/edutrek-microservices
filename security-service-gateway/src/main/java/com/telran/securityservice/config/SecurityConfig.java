@@ -82,10 +82,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/logs/{id}").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/logs/{id}").authenticated()
 
-                        .requestMatchers(HttpMethod.GET, "/notifications/{id}", "/notifications/all/{id}").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/notifications/{id}").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/notifications/{id}", "/notifications").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/notifications/{id}").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/notifications/{entityType}/{id}", "/notifications/entityTypes", "/notifications/subscribe/{clientId}").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/notifications/{entityType}/{id}").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/notifications/{entityType}", "/notifications").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/notifications/{entityType}/{id}").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/payments/paymentid/{id}", "/payments/studentid/{id}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/payments").authenticated()
