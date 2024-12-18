@@ -15,8 +15,8 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@CacheConfig(cacheNames={"statuses"})
-public class  StatusService {
+@CacheConfig(cacheNames = {"statuses"})
+public class StatusService {
 
     private final StatusRepository repository;
 
@@ -30,6 +30,13 @@ public class  StatusService {
     @Cacheable(key = "#id")
     public StatusEntity getById(int id) {
         return repository.findById(id).orElseThrow(() -> new StatusNotFoundException(id));
+    }
+
+    @Loggable
+    @Cacheable(key = "#name")
+    public int getIdByName(String name) {
+        StatusEntity status = repository.findByStatusName(name).orElseThrow(() -> new StatusNameNotFoundException(name));
+        return status.getStatusId();
     }
 
     @Loggable

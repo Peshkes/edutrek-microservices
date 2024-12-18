@@ -10,10 +10,9 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 
-
+@Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
 @Table(schema = "archive", name = "contacts")
 public class ContactArchiveEntity extends AbstractContacts {
 

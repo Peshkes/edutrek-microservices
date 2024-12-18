@@ -25,12 +25,18 @@ public interface StudentFeignClient {
     @RequestMapping(method = RequestMethod.GET, value = "/students/{id}")
     AbstractStudentDto promoteContactToStudentById(@PathVariable UUID id, StudentsFromContactDataDto data);
 
+    @RequestMapping(method = RequestMethod.POST, value = "/students/find_students_contacts")
+    List<AbstractStudentDto> findStudentsForContacts(@RequestBody FindStudentsForContactsDto data);
+
     @RequestMapping(method = RequestMethod.POST, value = "/students/find_students")
     List<AbstractStudentDto> findStudents(@RequestBody FindStudentsDto data);
 
     @RequestMapping(method = RequestMethod.DELETE, value = "/students/exists/delete/{id}")
     AbstractStudentDto deleteStudentIfExists(@PathVariable UUID id);
 
-    @RequestMapping(method = RequestMethod.POST, value = "")
+    @RequestMapping(method = RequestMethod.POST, value = "/students")
     AbstractStudentDto save(@RequestBody StudentsDataDto data);
+
+    @RequestMapping(method = RequestMethod.POST, value = "/students/promote")
+    AbstractStudentDto promote(@RequestBody StudentsDataDto data);
 }

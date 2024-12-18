@@ -83,9 +83,9 @@ public class ContactsController {
         return new ResponseEntity<>("Contact moved to archive", HttpStatus.OK);
     }
 
-    @PostMapping("/promote/{id}")
-    public ResponseEntity<String> promoteContactToStudentById(@PathVariable UUID id, @RequestBody @Valid StudentsFromContactDataDto studentData) {
-        contactsService.promoteContactToStudentById(id, studentData);
+    @PostMapping("/promote")
+    public ResponseEntity<String> promoteContactToStudentById( @RequestBody @Valid StudentsFromContactDataDto studentData) {
+        contactsService.promoteContactToStudentById(studentData);
         return new ResponseEntity<>("Contact promoted to student", HttpStatus.OK);
     }
 

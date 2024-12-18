@@ -58,7 +58,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/branches/{id}").hasRole(PRINCIPAL.toString())
 
                         .requestMatchers(HttpMethod.GET, "/contacts", "/contacts/{id}").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/contacts", "/contacts/promote/{id}").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/contacts", "/contacts/promote").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/contacts/{id}").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/contacts/{id}", "/contacts/archive/{id}/{reason}").authenticated()
 

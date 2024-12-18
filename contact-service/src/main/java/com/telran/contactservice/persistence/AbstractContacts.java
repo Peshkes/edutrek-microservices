@@ -14,7 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @MappedSuperclass
-public class AbstractContacts {
+public abstract class AbstractContacts {
     @Id
     @Setter(AccessLevel.NONE)
     @Column(name = "contact_id")

@@ -41,9 +41,9 @@ public class GroupController {
         return groupService.getAllPaginated(page, limit, filter_course, filter_is_active, search);
     }
 
-    @GetMapping("/groups/students")
+    @PostMapping("/students")
     @ResponseStatus(HttpStatus.OK)
-    public List<GetStudentsByGroupDto> getStudentsByGroup(@RequestBody @UUID Set<java.util.UUID> ids) {
+    public List<GetStudentsByGroupDto> getStudentsByGroup(@RequestBody Set<java.util.UUID> ids) {
         return groupService.getStudentsByGroup(ids);
     }
 

@@ -33,4 +33,10 @@ public class ShareException extends RuntimeException {
         }
     }
 
+    public static class StatusNameNotFoundException extends ShareException {
+        public StatusNameNotFoundException(String name) {
+            super(STATUS_NAME_NOT_FOUND + name);
+        }
+    }
+
 }

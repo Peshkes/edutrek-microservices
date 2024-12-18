@@ -52,7 +52,7 @@ public abstract class AbstractStudent {
     }
 
     public AbstractStudent(StudentsDataDto studentsDataDto) {
-        this.studentId = UUID.randomUUID();
+        this.studentId = studentsDataDto.getContactId();
         this.contactName = studentsDataDto.getContactName();
         this.phone = studentsDataDto.getPhone();
         this.email = studentsDataDto.getEmail();

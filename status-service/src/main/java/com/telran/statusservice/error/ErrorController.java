@@ -41,8 +41,13 @@ public class ErrorController {
         return new ResponseEntity<>(message, status);
     }
 
-    @ExceptionHandler(ShareException.StatusNotFoundException.class)
+    @ExceptionHandler(StatusNotFoundException.class)
     ResponseEntity<String> statusNotFoundException(StatusNotFoundException e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(StatusNameNotFoundException.class)
+    ResponseEntity<String> statusNameNotFoundException(StatusNameNotFoundException e) {
         return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 }

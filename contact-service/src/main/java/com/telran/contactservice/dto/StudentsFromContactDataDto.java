@@ -2,17 +2,18 @@ package com.telran.contactservice.dto;
 
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
+
+import java.util.UUID;
 
 
-@NoArgsConstructor
-@Getter
-@Setter
+
+@Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class StudentsFromContactDataDto {
-
+    UUID contactId;
     private int fullPayment;
     private boolean documentsDone;
 }
