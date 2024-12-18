@@ -20,10 +20,10 @@ public class ContactsDataDto {
     @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
     private String contactName;
 
-    @Pattern(regexp = "(\\+\\d{9,15})?")
+    @Pattern(regexp = "(\\+\\d{9,15})", message = "The ptone must start with a + and be 9-15 symbols")
     private String phone;
 
-    @Pattern(regexp = "(.[^,\\s]+@(\\w[^_#]+\\.)+[a-z]{2,12})?")
+    @Pattern(regexp = "(.[^,\\s]+@(\\w[^_#]+\\.)+[a-z]{2,12})", message = "Wrong email format")
     private String email;
 
     private int statusId;

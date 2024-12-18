@@ -1,24 +1,21 @@
 package com.telran.studentservice.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.util.UUID;
 
 
+@Data
 @NoArgsConstructor
-@Getter
-@Setter
 @AllArgsConstructor
-public class StudentsDataDto {
-    @NotNull
-    UUID contactId;
+public class StudentsPromoteDataDto {
+    @NotBlank(message = "Student ID cannot be blank")
+    private UUID studentId;
     @NotBlank(message = "Name cannot be blank")
     @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
     private String contactName;
@@ -33,6 +30,4 @@ public class StudentsDataDto {
     private String comment;
     private int fullPayment;
     private boolean documentsDone;
-    private String logText = null;
-
 }

@@ -1,10 +1,8 @@
 package com.telran.contactservice.service;
 
 import com.telran.contactservice.dto.*;
-import com.telran.contactservice.error.DatabaseException.DatabaseAddingException;
-import com.telran.contactservice.error.DatabaseException.DatabaseDeletingException;
-import com.telran.contactservice.error.Exception.ContactAlreadyExistsException;
-import com.telran.contactservice.error.Exception.ContactNotFoundException;
+import com.telran.contactservice.error.DatabaseException.*;
+import com.telran.contactservice.error.Exception.*;
 import com.telran.contactservice.feign.StudentFeignClient;
 import com.telran.contactservice.logging.Loggable;
 import com.telran.contactservice.persistence.AbstractContacts;
@@ -55,27 +53,28 @@ public class ContactsService {
         String statusName = statusId == null ? null : rabbitProducer.sendGetStatusNameById(statusId);
         Pageable pageable = PageRequest.of(page, pageSize);
         if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
-            List<AbstractContacts> foundContacts = findContactsAndStudents(pageable, search, statusId, courseId, contactArchiveRepository, IS_ARCHIVE_STUDENT_REPOSITORY, page, pageSize);
+            List<AbstractContacts> foundContacts = findContactsAndStudents(pageable, search, statusId, courseId, contactArchiveRepository, IS_ARCHIVE_STUDENT_REPOSITORY, pageSize);
             return new ContactSearchDto(foundContacts, page, pageSize, foundContacts.size());
         } else if (statusName != null && statusName.equalsIgnoreCase("Student")) {
             List<AbstractStudentDto> foundStudents = studentFeignClient.findStudents(new FindStudentsDto(pageable, search, statusId, null, courseId, true));
             if (foundStudents.size() < pageSize) {
-                List<AbstractStudentDto> foundStudentArchive = studentFeignClient.findStudents(new FindStudentsDto(PageRequest.of(page, pageSize - foundStudents.size()), search, statusId, null, courseId, false));
+                List<AbstractStudentDto> foundStudentArchive = studentFeignClient.findStudentsForContacts(new FindStudentsForContactsDto(pageSize - foundStudents.size(), search, statusId, null, courseId, false));
                 if (!foundStudentArchive.isEmpty())
                     foundStudents.addAll(foundStudentArchive);
             }
-            List<? extends AbstractContacts> contactFromStudents = foundStudents.stream().map(AbstractContacts::new).collect(Collectors.toList());
+            List<? extends AbstractContacts> contactFromStudents = foundStudents.stream().map(ContactsEntity::new).collect(Collectors.toList());
             return new ContactSearchDto(contactFromStudents, page, pageSize, contactFromStudents.size());
         } else {
-            List<AbstractContacts> foundContacts = findContactsAndStudents(pageable, search, statusId, courseId, contactRepository, IS_CURRENT_STUDENT_REPOSITORY, page, pageSize);
+            List<AbstractContacts> foundContacts = findContactsAndStudents(pageable, search, statusId, courseId, contactRepository, IS_CURRENT_STUDENT_REPOSITORY, pageSize);
             if (foundContacts.size() < pageSize) {
                 List<AbstractContacts> foundContactsArchive = findContacts(PageRequest.of(page, pageSize - foundContacts.size()), search, statusId, courseId, contactArchiveRepository);
                 if (!foundContactsArchive.isEmpty()) {
                     foundContacts.addAll(foundContactsArchive);
                 }
             }
-            if (foundContacts.size() < pageSize)
-                addStudents(search, statusId, courseId, IS_ARCHIVE_STUDENT_REPOSITORY, page, pageSize, foundContacts);
+            int size = foundContacts.size();
+            if (size < pageSize)
+                addStudents(search, statusId, courseId, IS_ARCHIVE_STUDENT_REPOSITORY, pageSize - size);
             return new ContactSearchDto(foundContacts, page, pageSize, foundContacts.size());
         }
     }
@@ -98,7 +97,7 @@ public class ContactsService {
 
     @Loggable
     @Transactional
-    public void addEntity(ContactsDataDto contactData) {
+    public void addEntity(@Valid ContactsDataDto contactData) {
         List<String> properties = checkStatusCourseBranch(contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getStatusId());
         if (!contactRepository.existsByPhoneOrEmail(contactData.getPhone(), contactData.getEmail())) {
             ContactsEntity newEntity = new ContactsEntity(contactData.getContactName(), contactData.getPhone(), contactData.getEmail(), contactData.getStatusId(), contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getComment());
@@ -145,7 +144,7 @@ public class ContactsService {
         List<String> properties = checkStatusCourseBranch(contactData.getBranchId(), contactData.getTargetCourseId(), contactData.getStatusId());
         AbstractContacts entity = contactRepository.getByContactId(id).or(() -> contactArchiveRepository.findById(id)).orElseThrow(() -> new ContactNotFoundException(id.toString()));
         List<String> updates = updateEntity(contactData, entity);
-        if (entity.getStatusId() != contactData.getStatusId() && entity instanceof ContactArchiveEntity ) {
+        if (entity.getStatusId() != contactData.getStatusId() && entity instanceof ContactArchiveEntity) {
             contactArchiveRepository.deleteById(id);
             contactRepository.save(new ContactsEntity(entity));
         }
@@ -171,13 +170,13 @@ public class ContactsService {
 
         String email = contactData.getEmail();
         if (!entity.getPhone().equals(email)) {
-            entity.setPhone(email);
+            entity.setEmail(email);
             updates.add("email");
         }
 
         String comment = contactData.getComment();
         if (!entity.getComment().equals(comment)) {
-            entity.setPhone(comment);
+            entity.setComment(comment);
             updates.add("comment");
         }
 
@@ -228,19 +227,20 @@ public class ContactsService {
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    public void promoteContactToStudentById(UUID id, @Valid StudentsFromContactDataDto studentData) {
+    public void promoteContactToStudentById(@Valid StudentsFromContactDataDto studentData) {
+        UUID id = studentData.getContactId();
         ContactsEntity contact = contactRepository.findById(id).orElseThrow(() -> new ContactNotFoundException(id.toString()));
         if (!studentFeignClient.existsById(id)) {
             contact.setStatusId(rabbitProducer.sendGetStatusIdByName("Student"));
             try {
-                studentFeignClient.save(new StudentsDataDto(contact, studentData));
-            } catch (Exception e) {
-                throw new DatabaseAddingException(e.getMessage());
-            }
-            try {
                 contactRepository.deleteById(id);
             } catch (Exception e) {
                 throw new DatabaseDeletingException(e.getMessage());
+            }
+            try {
+                studentFeignClient.promote(new StudentsDataDto(contact, studentData));
+            } catch (Exception e) {
+                throw new DatabaseAddingException(e.getMessage());
             }
             rabbitProducer.sendAddLog(id, "Contact " + contact.getContactName() + " promoted to student");
         }
@@ -271,29 +271,26 @@ public class ContactsService {
 
 
     @Loggable
-    @SuppressWarnings("unchecked")
     public static <C extends AbstractContacts, E extends IContactRepository<C>> List<AbstractContacts> findContacts(Pageable pageable, String search, Integer statusId, UUID courseId, E repository) {
         Specification<C> contactSpecs = new ContactsFilterSpecifications<C>().getSpecifications(search, statusId, courseId);
-        Page<? extends AbstractContacts> pageContactEntity = repository.findAll(contactSpecs, pageable);
-        return (List<AbstractContacts>) pageContactEntity.getContent();
+        return new ArrayList<>(repository.findAll(contactSpecs, pageable).getContent());
     }
 
     @Loggable
-    private <C extends AbstractContacts, CR extends IContactRepository<C>> List<AbstractContacts> findContactsAndStudents(Pageable pageable, String search, Integer statusId, UUID courseId, CR contactsRepository, boolean isCurrentStudentRepository, int page, int pageSize) {
+    private <C extends AbstractContacts, CR extends IContactRepository<C>> List<AbstractContacts> findContactsAndStudents(Pageable pageable, String search, Integer statusId, UUID courseId, CR contactsRepository, boolean isCurrentStudentRepository, int pageSize) {
         List<AbstractContacts> foundContact = findContacts(pageable, search, statusId, courseId, contactsRepository);
-        if (foundContact.size() < pageSize) {
-            addStudents(search, statusId, courseId, isCurrentStudentRepository, page, pageSize, foundContact);
-        }
+        int size = foundContact.size();
+        if (size < pageSize)
+            foundContact.addAll(addStudents(search, statusId, courseId, isCurrentStudentRepository, size));
         return foundContact;
     }
 
     @Loggable
-    private void addStudents(String search, Integer statusId, UUID courseId, boolean isCurrentStudentRepository, int page, int pageSize, List<AbstractContacts> foundContact) {
-        List<AbstractStudentDto> foundStudents = studentFeignClient.findStudents(new FindStudentsDto(PageRequest.of(page, pageSize - foundContact.size()), search, statusId, null, courseId, isCurrentStudentRepository));
-        if (!foundStudents.isEmpty()) {
-            List<? extends AbstractContacts> contactFromStudents = foundStudents.stream().map(AbstractContacts::new).toList();
-            foundContact.addAll(contactFromStudents);
-        }
+    private List<? extends AbstractContacts> addStudents(String search, Integer statusId, UUID courseId, boolean isCurrentStudentRepository, int size) {
+        List<AbstractStudentDto> foundStudents = studentFeignClient.findStudentsForContacts(new FindStudentsForContactsDto(size, search, statusId, null, courseId, isCurrentStudentRepository));
+        if (!foundStudents.isEmpty())
+            return foundStudents.stream().map(ContactsEntity::new).toList();
+        return new ArrayList<>();
     }
 
     @Loggable

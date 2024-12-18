@@ -58,6 +58,8 @@ public class ContactRabbitProducer {
     private <R> R sendMessage(String type, Object payload, String routingKey, Class<R> responseType) {
         RabbitMessageDto messageDto = sendAndReceiveRabbitMessage(type, payload, routingKey);
         Object result = messageDto.getPayload();
+//        if (messageDto.getType().equals("error"))
+//            throw new UnsuccessfulRequest((String) result);
         if (responseType.isInstance(result)) {
             return responseType.cast(result);
         }

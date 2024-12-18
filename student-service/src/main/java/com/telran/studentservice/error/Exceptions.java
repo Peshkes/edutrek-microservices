@@ -50,4 +50,10 @@ public class Exceptions extends RuntimeException {
             super(STUDENT_OR_CONTACT_ALREADY_EXISTS);
         }
     }
+
+    public static class StudentAlreadyExistsException extends Exceptions {
+        public StudentAlreadyExistsException(String message) {
+            super(STUDENT_ALREADY_EXISTS + message);
+        }
+    }
 }

@@ -131,13 +131,13 @@ public class LectureService {
 
         String email = data.getEmail();
         if (!entity.getPhone().equals(email)) {
-            entity.setPhone(email);
+            entity.setEmail(email);
             updates.add("email");
         }
 
         String comment = data.getComment();
         if (!entity.getComment().equals(comment)) {
-            entity.setPhone(comment);
+            entity.setComment(comment);
             updates.add("comment");
         }
 
