@@ -15,7 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class AddGroupDto {
     @NotBlank(message = "Group name cannot be empty")
-    @Size(max = 100, message = "Group name must not exceed 100 characters")
+    @Size(max = 25, message = "Group name must not exceed 25 characters")
     private String groupName;
 
     @NotNull(message = "Start date cannot be null")

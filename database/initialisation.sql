@@ -289,6 +289,5 @@ CREATE TABLE archive.lecturers_by_group
     group_id         uuid    NOT NULL,
     PRIMARY KEY (lecturer_id, group_id),
     is_webinarist    boolean NOT NULL,
-    is_active        boolean NOT NULL,
-    archivation_date date    NOT NULL
+    is_active        boolean NOT NULL
 );
