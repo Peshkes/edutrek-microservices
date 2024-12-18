@@ -2,6 +2,7 @@ package com.telran.lecturerservice.controller;
 
 import com.telran.lecturerservice.dto.LecturerDataDto;
 import com.telran.lecturerservice.dto.LecturerPaginationResponseDto;
+import com.telran.lecturerservice.dto.UpdateLecturerDto;
 import com.telran.lecturerservice.persistence.BaseLecturer;
 import com.telran.lecturerservice.service.LectureService;
 import jakarta.validation.Valid;
@@ -46,13 +47,13 @@ public class LecturerController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateLecturerById(@PathVariable @UUID String id, @RequestBody @Valid LecturerDataDto data) {
+    public ResponseEntity<String> updateLecturerById(@PathVariable @UUID String id, @RequestBody @Valid UpdateLecturerDto data) {
             lectureService.updateById(java.util.UUID.fromString(id), data);
             return new ResponseEntity<>("Lecturer updated", HttpStatus.OK);
     }
 
-    @PutMapping("/archive/{id}")
-    public ResponseEntity<String> archiveLecturerById(@PathVariable @UUID String id, @RequestBody String reason) {
+    @PutMapping("/archive/{id}/{reason}")
+    public ResponseEntity<String> archiveLecturerById(@PathVariable @UUID String id, @PathVariable String reason) {
         lectureService.archiveById(java.util.UUID.fromString(id), reason);
         return new ResponseEntity<>("Lecturer archived", HttpStatus.OK);
     }

@@ -1,7 +1,6 @@
 package com.telran.notificationservice.service;
 
 
-import com.telran.notificationservice.persistence.contact_notifications.ContactNotificationsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -15,7 +14,6 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class SseService {
-    private final ContactNotificationsRepository notificationsRepository;
     private final Map<UUID, SseEmitter> clients = new HashMap<>();
 
 
@@ -27,7 +25,7 @@ public class SseService {
         emitter.onTimeout(() -> clients.remove(clientId));
         emitter.onError(e -> clients.remove(clientId));
         System.err.println("ClientId: " + clientId);
-        System.err.println("Emmiter: " + emitter);
+        System.err.println("Emitter: " + emitter);
         return emitter;
     }
 

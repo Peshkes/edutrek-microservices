@@ -125,22 +125,16 @@ public class GroupService {
 //    }
 
 
-
-
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(AddGroupDto groupData) {
         if (!rabbitProducer.sendCourseExists(groupData.getCourseId()))
             throw new CourseNotFoundException(String.valueOf(groupData.getCourseId()));
-        try {
-            UUID groupId = repository.save(constructEntity(groupData)).getGroupId();
-            addSmthByWeekdays(groupData.getLessons(), groupId, lessonsByWeekdayRepository, LessonsByWeekdayEntity::new);
-            addSmthByWeekdays(groupData.getWebinars(), groupId, webinarsByWeekdayRepository, WebinarsByWeekdayEntity::new);
-            addLecturersToGroup(groupData.getLecturers(), groupId, lecturersByGroupRepository, LecturersByGroupEntity::new);
-        } catch (Exception e) {
-            throw new DatabaseAddingException(e.getMessage());
-        }
+        UUID groupId = repository.save(constructEntity(groupData)).getGroupId();
+        addSmthByWeekdays(groupData.getLessons(), groupId, lessonsByWeekdayRepository, LessonsByWeekdayEntity::new);
+        addSmthByWeekdays(groupData.getWebinars(), groupId, webinarsByWeekdayRepository, WebinarsByWeekdayEntity::new);
+        addLecturersToGroup(groupData.getLecturers(), groupId, lecturersByGroupRepository, LecturersByGroupEntity::new);
     }
 
     @Loggable
@@ -211,7 +205,8 @@ public class GroupService {
         if (groupData.getGroupName() != null) groupEntity.setGroupName(groupData.getGroupName());
         if (groupData.getFinishDate() != null) groupEntity.setFinishDate(groupData.getFinishDate());
         if (groupData.getIsActive() != null) groupEntity.setIsActive(groupData.getIsActive());
-        if (groupData.getCourseId() != null && !rabbitProducer.sendCourseExists(groupData.getCourseId())) groupEntity.setCourseId(groupData.getCourseId());
+        if (groupData.getCourseId() != null && !rabbitProducer.sendCourseExists(groupData.getCourseId()))
+            groupEntity.setCourseId(groupData.getCourseId());
         if (groupData.getSlackLink() != null) groupEntity.setSlackLink(groupData.getSlackLink());
         if (groupData.getWhatsAppLink() != null) groupEntity.setWhatsAppLink(groupData.getWhatsAppLink());
         if (groupData.getSkypeLink() != null) groupEntity.setSkypeLink(groupData.getSkypeLink());
