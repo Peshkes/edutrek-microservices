@@ -76,7 +76,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/lecturers", "/lecturers/{id}", "/lecturers/paginated").authenticated()
                         .requestMatchers(HttpMethod.POST, "/lecturers").hasRole(PRINCIPAL.toString())
                         .requestMatchers(HttpMethod.DELETE, "/lecturers/{id}").hasRole(PRINCIPAL.toString())
-                        .requestMatchers(HttpMethod.PUT, "/lecturers/{id}", "/lecturers/archive/{id}").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/lecturers/{id}", "/lecturers/archive/{id}/{reason}").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/logs/{id}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/logs/{id}").authenticated()

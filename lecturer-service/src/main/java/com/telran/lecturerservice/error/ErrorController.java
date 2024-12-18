@@ -24,8 +24,8 @@ public class ErrorController {
         return returnResponse(e.getMessage(), HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(Exception.class)
-    ResponseEntity<String> lecturerNotFoundExceptionHandler(Exception e) {
+    @ExceptionHandler(LecturerNotFoundException.class)
+    ResponseEntity<String> lecturerNotFoundExceptionHandler(LecturerNotFoundException e) {
         return returnResponse(e.getMessage(), HttpStatus.NOT_FOUND);
     }
 

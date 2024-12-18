@@ -3,6 +3,7 @@ package com.telran.lecturerservice.service;
 import com.telran.lecturerservice.dto.AddLogDto;
 import com.telran.lecturerservice.dto.LecturerDataDto;
 import com.telran.lecturerservice.dto.LecturerPaginationResponseDto;
+import com.telran.lecturerservice.dto.UpdateLecturerDto;
 import com.telran.lecturerservice.error.BranchNotFoundException;
 import com.telran.lecturerservice.error.DatabaseException.DatabaseAddingException;
 import com.telran.lecturerservice.error.DatabaseException.DatabaseDeletingException;
@@ -105,46 +106,45 @@ public class LectureService {
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    public void updateById(UUID id, LecturerDataDto data) {
-        checkBranchExists(data.getBranchId());
+    public void updateById(UUID id, UpdateLecturerDto data) {
         BaseLecturer entity = repository.getLecturerByLecturerId(id).or(() -> archiveRepository.getLecturerByLecturerId(id)).orElseThrow(() -> new Exception(id.toString()));
         List<String> updates = updateEntity(data, entity);
         String log = data.getLogText();
-        if (!updates.isEmpty())
-            addLog(id, log != null ? log : "Lecturer updated. Updated info: " + updates);
+        if (!updates.isEmpty()) addLog(id, log != null ? log : "Lecturer updated. Updated info: " + updates);
     }
 
-    private <T extends BaseLecturer> List<String> updateEntity(LecturerDataDto data, T entity) {
+    private <T extends BaseLecturer> List<String> updateEntity(UpdateLecturerDto data, T entity) {
         List<String> updates = new ArrayList<>();
 
+        Integer branch = data.getBranchId();
+        if (branch != null && entity.getBranchId() != branch) {
+            checkBranchExists(branch);
+            entity.setBranchId(branch);
+            updates.add("branch");
+        }
+
         String name = data.getLecturerName();
-        if (!entity.getLecturerName().equals(name)) {
+        if (name != null && !entity.getLecturerName().equals(name)) {
             entity.setLecturerName(name);
             updates.add("name");
         }
 
         String phone = data.getPhone();
-        if (!entity.getPhone().equals(phone)) {
+        if (phone != null && !entity.getPhone().equals(phone)) {
             entity.setPhone(phone);
             updates.add("phone");
         }
 
         String email = data.getEmail();
-        if (!entity.getPhone().equals(email)) {
+        if (email != null && !entity.getEmail().equals(email)) {
             entity.setEmail(email);
             updates.add("email");
         }
 
         String comment = data.getComment();
-        if (!entity.getComment().equals(comment)) {
+        if (comment != null && !entity.getComment().equals(comment)) {
             entity.setComment(comment);
             updates.add("comment");
-        }
-
-        int branch = data.getBranchId();
-        if (entity.getBranchId() != branch) {
-            entity.setBranchId(branch);
-            updates.add("branch");
         }
 
         return updates;
@@ -153,14 +153,12 @@ public class LectureService {
     @Loggable
     @Transactional
     public void archiveById(UUID uuid, String reason) {
-        if (repository.existsById(uuid)) {
-            BaseLecturer lecturer = deleteById(uuid);
-            try {
-                archiveRepository.save(new LecturerArchiveEntity(lecturer, reason));
-                addLog(uuid, "Lecturer archived. Reason: " + reason);
-            } catch (java.lang.Exception e) {
-                throw new DatabaseAddingException(e.getMessage());
-            }
+        BaseLecturer lecturer = deleteById(uuid);
+        try {
+            archiveRepository.save(new LecturerArchiveEntity(lecturer, reason));
+            addLog(uuid, "Lecturer archived. Reason: " + reason);
+        } catch (java.lang.Exception e) {
+            throw new DatabaseAddingException(e.getMessage());
         }
     }
 

@@ -1,6 +1,8 @@
 package com.telran.securityservice.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +17,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class GatewayController {
 
+    private static final Logger log = LoggerFactory.getLogger(GatewayController.class);
     @Value("${service.authentication.url}")
     private String authenticationServiceUrl;
 
@@ -88,12 +91,15 @@ public class GatewayController {
         String targetUrl;
         try {
             targetUrl = getTargetUrl(request.getRequestURI());
+            String query = request.getQueryString();
+            if (query != null) targetUrl += "?" + query;
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
 
         HttpHeaders headers = getRequestHeaders(request);
-        headers.add("X-Request-Id", UUID.randomUUID().toString());
+        String requestId = UUID.randomUUID().toString();
+        headers.add("X-Request-Id", requestId);
         HttpEntity<String> entity = new HttpEntity<>(body, headers);
         HttpMethod method;
         try {
@@ -104,11 +110,10 @@ public class GatewayController {
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(targetUrl, method, entity, String.class);
+            log.info("Forwarding {} request {} to: {}", method, requestId, targetUrl);
             return ResponseEntity.status(response.getStatusCode()).headers(response.getHeaders()).body(response.getBody());
         } catch (HttpClientErrorException e) {
             return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while forwarding the request: " + e.getMessage());
         }
     }
 }
