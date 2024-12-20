@@ -8,6 +8,7 @@ import com.telran.lecturerservice.error.BranchNotFoundException;
 import com.telran.lecturerservice.error.DatabaseException.DatabaseAddingException;
 import com.telran.lecturerservice.error.DatabaseException.DatabaseDeletingException;
 import com.telran.lecturerservice.error.Exception;
+import com.telran.lecturerservice.error.LecturerNotFoundException;
 import com.telran.lecturerservice.feign.GroupClient;
 import com.telran.lecturerservice.logging.Loggable;
 import com.telran.lecturerservice.persistence.*;
@@ -81,11 +82,8 @@ public class LectureService {
             if (lecturer != null) {
                 deleteLecturer(id, groupClient::deleteCurrentLecturersByLecturerId, repository::deleteById);
             } else {
-                lecturer = archiveRepository.findById(id).orElse(null);
-                if (lecturer != null)
-                    deleteLecturer(id, groupClient::deleteArchiveLecturersByLecturerId, archiveRepository::deleteById);
-                else
-                    throw new Exception(id.toString());
+                lecturer = archiveRepository.findById(id).orElseThrow(() -> new LecturerNotFoundException(id.toString()));
+                deleteLecturer(id, groupClient::deleteArchiveLecturersByLecturerId, archiveRepository::deleteById);
             }
             rabbitProducer.deleteLog(id);
             return lecturer;
