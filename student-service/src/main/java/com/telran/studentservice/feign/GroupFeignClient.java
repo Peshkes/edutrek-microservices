@@ -20,8 +20,8 @@ public interface GroupFeignClient {
     void archiveStudents(@PathVariable UUID id);
 
     @RequestMapping(method = RequestMethod.DELETE, value = "/groups/delete/studentid/{id}/{iscurrent}")
-    void deleteByStudentId(@PathVariable UUID id, boolean iscurrent);
+    void deleteByStudentId(@PathVariable UUID id,@PathVariable boolean iscurrent);
 
-    @RequestMapping(method = RequestMethod.GET, value = "/groups/students")
+    @RequestMapping(method = RequestMethod.POST, value = "/groups/students")
     List<GetStudentsByGroupDto> getStudentsByGroup(@RequestBody Set<UUID> ids);
 }

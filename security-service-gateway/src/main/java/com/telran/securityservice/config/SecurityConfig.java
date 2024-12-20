@@ -58,7 +58,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/branches/{id}").hasRole(PRINCIPAL.toString())
 
                         .requestMatchers(HttpMethod.GET, "/contacts", "/contacts/{id}").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/contacts", "/contacts/promote/{id}").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/contacts", "/contacts/promote").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/contacts/{id}").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/contacts/{id}", "/contacts/archive/{id}/{reason}").authenticated()
 
@@ -102,7 +102,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/students", "/students/{id}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/students").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/students/{id}").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/students/{id}", "/students/archive/{id}/{reason}", "/students/graduate/{id}").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/students", "/students/archive/{id}/{reason}", "/students/graduate/{id}").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/weekdays", "/weekdays/{id}").authenticated()
 

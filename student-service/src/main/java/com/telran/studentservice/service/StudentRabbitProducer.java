@@ -28,8 +28,8 @@ public class StudentRabbitProducer {
         return sendMessage("getNameById", statusId, "statuses_key", String.class);
     }
 
-    public String sendGetStatusIdByName(String name) {
-        return sendMessage("getIdByName", name, "statuses_key", String.class);
+    public int sendGetStatusIdByName(String name) {
+        return sendMessage("getIdByName", name, "statuses_key", Integer.class);
     }
 
     //Branches

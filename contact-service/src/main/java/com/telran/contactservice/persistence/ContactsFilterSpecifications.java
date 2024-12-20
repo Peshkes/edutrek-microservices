@@ -40,9 +40,7 @@ public class ContactsFilterSpecifications<E extends AbstractContacts> {
         if (targetCourseId != null)
             specs = specs.and(this.hasTargetCourseId(targetCourseId));
         if (search != null && !search.isEmpty() && !search.isBlank()) {
-            specs = specs.and(this.hasName(search))
-                    .or(this.hasPhone(search))
-                    .or(this.hasEmail(search));
+            specs = specs.and(this.hasName(search).or(this.hasPhone(search).or(this.hasEmail(search))));
         }
         return specs;
     }

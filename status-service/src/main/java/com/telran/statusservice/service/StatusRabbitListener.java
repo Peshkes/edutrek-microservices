@@ -16,18 +16,18 @@ public class StatusRabbitListener {
 
     @RabbitListener(queues = "statuses_q")
     RabbitMessageDto receiveMessage(RabbitMessageDto message) {
-        int statusId = (int) message.getPayload();
         String type = message.getType();
+        Object statusPayload = message.getPayload();
         String correlationId = message.getCorrelationId();
-        log.info("RequestId: {} - Method {} from RabbitMQ. Payload: {}", correlationId, type, statusId);
+        log.info("RequestId: {} - Method {} from RabbitMQ. Payload: {}", correlationId, type, statusPayload);
         try {
-            message.setPayload(switch (message.getType()) {
-                case "getIdByName" -> service.getById(statusId).getStatusId();
-                case "getNameById" -> service.getById(statusId).getStatusName();
-                case "existsById" -> service.existsById(statusId);
+            message.setPayload(switch (type) {
+                case "getIdByName" -> service.getIdByName((String) statusPayload);
+                case "getNameById" -> service.getById((int) statusPayload).getStatusName();
+                case "existsById" -> service.existsById((int) statusPayload);
                 default -> null;
             });
-        }catch (Exception e) {
+        } catch (Exception e) {
             message.setType("error");
             message.setPayload(e.getMessage());
         }
