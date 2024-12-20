@@ -83,9 +83,9 @@ public class StudentsController {
     }
 
 
-    @PutMapping("/{id}")
-    public ResponseEntity<String> updateById(@PathVariable UUID id, @RequestBody @Valid StudentsDataDto contactData) {
-        studentService.updateById(id, contactData);
+    @PutMapping("")
+    public ResponseEntity<String> updateById(@RequestBody @Valid StudentsDataDto contactData) {
+        studentService.updateById(contactData);
         return new ResponseEntity<>("Student updated", HttpStatus.OK);
     }
 

@@ -50,4 +50,17 @@ public class Exception extends RuntimeException {
             super(STUDENT_OR_CONTACT_ALREADY_EXISTS);
         }
     }
+    public static class StudentAlreadyExistsException extends Exception {
+        public StudentAlreadyExistsException(String message) {
+            super(STUDENT_ALREADY_EXISTS + message);
+        }
+    }
+
+    public static class PromoteUnsuccesfull extends Exception {
+        public PromoteUnsuccesfull(String message) {
+            super(PROMOTE_USUCCESFULL + message);
+        }
+    }
+
+
 }

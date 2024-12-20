@@ -9,4 +9,5 @@ public class Errors {
     static final String  NOT_A_STUDENT_STATUS = "Only a student can be added to students";
     static final String  STUDENT_OR_CONTACT_ALREADY_EXISTS = "Student or contact already exists";
     static final String  STUDENT_ALREADY_EXISTS = "Student already exists: ";
+
 }

@@ -96,6 +96,15 @@ public class ErrorController {
         return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(StudentAlreadyExistsException.class)
+    ResponseEntity<String> studentAlreadyExistsException(StudentAlreadyExistsException e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(PromoteUnsuccesfull.class)
+    ResponseEntity<String> promoteUnsuccesfull(PromoteUnsuccesfull e) {
+        return returnResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
 
     private ResponseEntity<String> returnResponse(String message, HttpStatus status) {
         log.error(message);

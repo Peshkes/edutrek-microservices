@@ -10,8 +10,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GetStudentsByGroupDto {
-    private UUID studentId;
     private UUID groupId;
+    private UUID studentId;
     private String groupName;
     private Boolean isActive;
 }

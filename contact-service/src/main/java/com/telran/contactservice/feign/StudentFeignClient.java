@@ -38,5 +38,5 @@ public interface StudentFeignClient {
     AbstractStudentDto save(@RequestBody StudentsDataDto data);
 
     @RequestMapping(method = RequestMethod.POST, value = "/students/promote")
-    AbstractStudentDto promote(@RequestBody StudentsDataDto data);
+    void promote(@RequestBody StudentsDataDto data);
 }

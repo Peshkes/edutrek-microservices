@@ -10,4 +10,6 @@ public class Errors {
     static final String COURSE_NOT_FOUND = "Course not found: ";
     static final String  RABBIT_REQUEST_FAILED = "Rabbit request failed: ";
     static final String  STUDENT_OR_CONTACT_ALREADY_EXISTS = "Student or contact already exists";
+    static final String  STUDENT_ALREADY_EXISTS = "Student already exists: ";
+    static final String  PROMOTE_USUCCESFULL = "Contact wasn't promoted: ";
 }

@@ -56,4 +56,6 @@ public class Exceptions extends RuntimeException {
             super(STUDENT_ALREADY_EXISTS + message);
         }
     }
+
+
 }

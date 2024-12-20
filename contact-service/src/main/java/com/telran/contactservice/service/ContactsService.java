@@ -1,7 +1,8 @@
 package com.telran.contactservice.service;
 
 import com.telran.contactservice.dto.*;
-import com.telran.contactservice.error.DatabaseException.*;
+import com.telran.contactservice.error.DatabaseException.DatabaseAddingException;
+import com.telran.contactservice.error.DatabaseException.DatabaseDeletingException;
 import com.telran.contactservice.error.Exception.*;
 import com.telran.contactservice.feign.StudentFeignClient;
 import com.telran.contactservice.logging.Loggable;
@@ -17,7 +18,6 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -240,9 +240,11 @@ public class ContactsService {
             try {
                 studentFeignClient.promote(new StudentsDataDto(contact, studentData));
             } catch (Exception e) {
-                throw new DatabaseAddingException(e.getMessage());
+                throw new PromoteUnsuccesfull(e.getMessage());
             }
             rabbitProducer.sendAddLog(id, "Contact " + contact.getContactName() + " promoted to student");
+        }else{
+            throw new StudentAlreadyExistsException(id.toString());
         }
     }
 

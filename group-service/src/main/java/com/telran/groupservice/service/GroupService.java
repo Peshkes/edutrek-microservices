@@ -240,7 +240,7 @@ public class GroupService {
     public void addStudentsToGroup(UUID uuid, List<UUID> students) {
         if (repository.existsById(uuid)) {
             for (UUID student : students) {
-                if (studentsByGroupRepository.existsByGroupIdAndStudentId(uuid, student))
+                if (!studentsByGroupRepository.existsByGroupIdAndStudentId(uuid, student))
                     try {
                         studentsByGroupRepository.save(new StudentsByGroupEntity(uuid, student, true));
                     } catch (Exception e) {
@@ -302,8 +302,7 @@ public class GroupService {
                     throw new DatabaseUpdatingException(e.getMessage());
                 }
             }
-        } else
-            throw new GroupNotFoundException(String.valueOf(studentId));
+        }
     }
 
     @Loggable
@@ -375,7 +374,6 @@ public class GroupService {
                     throw new DatabaseUpdatingException(e.getMessage());
                 }
             }
-        } else
-            throw new GroupNotFoundException(String.valueOf(studentId));
+        }         //throw new GroupNotFoundException(String.valueOf(studentId));
     }
 }

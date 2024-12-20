@@ -12,17 +12,27 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 @NoRepositoryBean
 public interface IStudentsByGroupRepository<T extends BaseStudentsByGroup> extends IJunctionTableRepository, JpaRepository<T, ComposeStudentsKey> {
-   boolean existsByGroupIdAndStudentId(UUID groupId, UUID studentId);
-   void deleteByGroupId(UUID groupId);
-   List<T> getByGroupId(@Param("id") UUID uuid);
-   Optional<BaseStudentsByGroup> getByGroupIdAndStudentId(UUID groupId, UUID studentId);
+    boolean existsByGroupIdAndStudentId(UUID groupId, UUID studentId);
+
+    void deleteByGroupId(UUID groupId);
+
+    List<T> getByGroupId(@Param("id") UUID uuid);
+
+    Optional<BaseStudentsByGroup> getByGroupIdAndStudentId(UUID groupId, UUID studentId);
 
     List<BaseStudentsByGroup> findByStudentId(UUID studentId);
 
-    @Query(nativeQuery = true, value = "SELECT sbg.group_id, sbg.student_id, sbg.is_active, g.group_name " +
-            "FROM current.students_by_group as sbg INNER JOIN current.groups as g ON sbg.group_id = g.group_id " +
-            "WHERE sbg.student_id IN (:studentIds)")
+//    @Query(nativeQuery = true, value = "SELECT sbg.group_id, sbg.student_id, sbg.is_active, g.group_name " +
+//            "FROM current.students_by_group as sbg INNER JOIN current.groups as g ON sbg.group_id = g.group_id " +
+//            "WHERE sbg.student_id IN (:studentIds)")
+//    List<GetStudentsByGroupDto> findGroupsByStudentIds(Set<UUID> studentIds);
+
+    @Query("SELECT new com.telran.groupservice.dto.GetStudentsByGroupDto(sbg.groupId, sbg.studentId, sbg.isActive, g.groupName) " +
+            "FROM StudentsByGroupEntity sbg INNER JOIN GroupEntity g ON sbg.groupId = g.groupId " +
+            "WHERE sbg.studentId IN :studentIds")
     List<GetStudentsByGroupDto> findGroupsByStudentIds(Set<UUID> studentIds);
+
 }

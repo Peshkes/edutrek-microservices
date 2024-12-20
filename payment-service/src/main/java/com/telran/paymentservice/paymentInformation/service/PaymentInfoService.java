@@ -4,7 +4,6 @@ package com.telran.paymentservice.paymentInformation.service;
 import com.telran.paymentservice.error.DatabaseException.DatabaseAddingException;
 import com.telran.paymentservice.error.DatabaseException.DatabaseDeletingException;
 import com.telran.paymentservice.error.ShareException.PaymentInfoNotFoundException;
-import com.telran.paymentservice.error.ShareException.StudentNotFoundException;
 import com.telran.paymentservice.logging.Loggable;
 import com.telran.paymentservice.paymentInformation.dto.PaymentInfoDataDto;
 import com.telran.paymentservice.paymentInformation.dto.PaymentsInfoSearchDto;
@@ -76,17 +75,18 @@ public class PaymentInfoService {
     @CacheEvict(key = "{'getAll'}")
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(PaymentInfoDataDto paymentInfoDtoData) {
-        if (!studentsFeignClient.existsById(paymentInfoDtoData.getStudentId())) {
-            throw new StudentNotFoundException(String.valueOf(paymentInfoDtoData.getStudentId()));
-        }
-        try {
-            repository.save(new PaymentInfoEntity(
-                    paymentInfoDtoData.getStudentId(),
-                    paymentInfoDtoData.getPaymentTypeId(),
-                    paymentInfoDtoData.getPaymentUmount(),
-                    paymentInfoDtoData.getPaymentDetails()));
-        } catch (Exception e) {
-            throw new DatabaseAddingException(e.getMessage());
+        if (studentsFeignClient.existsById(paymentInfoDtoData.getStudentId())) {
+            //throw new StudentNotFoundException(String.valueOf(paymentInfoDtoData.getStudentId()));
+
+            try {
+                repository.save(new PaymentInfoEntity(
+                        paymentInfoDtoData.getStudentId(),
+                        paymentInfoDtoData.getPaymentTypeId(),
+                        paymentInfoDtoData.getPaymentUmount(),
+                        paymentInfoDtoData.getPaymentDetails()));
+            } catch (Exception e) {
+                throw new DatabaseAddingException(e.getMessage());
+            }
         }
     }
 
