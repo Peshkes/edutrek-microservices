@@ -1,9 +1,7 @@
 package com.telran.studentservice.controller;
 
 
-import com.telran.studentservice.dto.FindStudentsDto;
-import com.telran.studentservice.dto.StudentSearchDto;
-import com.telran.studentservice.dto.StudentsDataDto;
+import com.telran.studentservice.dto.*;
 import com.telran.studentservice.persistence.AbstractStudent;
 import com.telran.studentservice.service.StudentsService;
 import jakarta.validation.Valid;
@@ -59,11 +57,24 @@ public class StudentsController {
         return studentService.findStudents(findStudentsDto.getPageable(),findStudentsDto.getSearch(), findStudentsDto.getStatusId(), findStudentsDto.getGroup_id(), findStudentsDto.getCourseId(),findStudentsDto.isCurrentRepository());
     }
 
+    @PostMapping("/find_students_contacts")
+    @ResponseStatus(HttpStatus.OK)
+    public List<AbstractStudent> findStudentsForContacts(@RequestBody FindStudentsForContactsDto findStudentsDto) {
+        return studentService.findStudentForContacts(findStudentsDto.getQuantity(),findStudentsDto.getSearch(), findStudentsDto.getStatusId(), findStudentsDto.getGroup_id(), findStudentsDto.getCourseId(),findStudentsDto.isCurrentRepository());
+    }
+
+    @PostMapping("/promote")
+    public ResponseEntity<String> promoteEntity(@RequestBody @Valid StudentsDataDto studentsDataDto) {
+        studentService.promoteEntity(studentsDataDto);
+        return new ResponseEntity<>("Student created", HttpStatus.CREATED);
+    }
+
     @PostMapping("")
     public ResponseEntity<String> addEntity(@RequestBody @Valid StudentsDataDto studentDto) {
         studentService.addEntity(studentDto);
         return new ResponseEntity<>("Student created", HttpStatus.CREATED);
     }
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteById(@PathVariable UUID id) {
@@ -72,9 +83,9 @@ public class StudentsController {
     }
 
 
-    @PutMapping("/{id}")
-    public ResponseEntity<String> updateById(@PathVariable UUID id, @RequestBody @Valid StudentsDataDto contactData) {
-        studentService.updateById(id, contactData);
+    @PutMapping("")
+    public ResponseEntity<String> updateById(@RequestBody @Valid StudentsDataDto contactData) {
+        studentService.updateById(contactData);
         return new ResponseEntity<>("Student updated", HttpStatus.OK);
     }
 

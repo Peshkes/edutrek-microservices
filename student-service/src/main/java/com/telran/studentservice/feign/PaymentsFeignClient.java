@@ -15,7 +15,7 @@ public interface PaymentsFeignClient {
     @RequestMapping(method = RequestMethod.DELETE, value = "/payments/studentid/{id}")
     void deletePaymentByStudentId(@PathVariable UUID id);
 
-    @RequestMapping(method = RequestMethod.GET, value = "/payments/archive/{id}")
+    @RequestMapping(method = RequestMethod.PUT, value = "/payments/archive/{id}")
     void moveToArchiveById(@PathVariable UUID id);
 
 }

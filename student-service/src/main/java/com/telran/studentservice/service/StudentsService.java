@@ -66,11 +66,10 @@ public class StudentsService {
             }
         }
         Map<UUID, StudentWithGroupDto> foundStudentsMap = foundStudents.stream().collect(Collectors.toMap(AbstractStudent::getStudentId, StudentWithGroupDto::new));
+        System.out.println("Map<UUID, StudentWithGroupDto>: " + foundStudentsMap);
         List<GetStudentsByGroupDto> studentsByGroup = groupFeignClient.getStudentsByGroup(foundStudentsMap.keySet());
-        studentsByGroup.forEach(s -> {
-            UUID id = s.getStudentId();
-            foundStudentsMap.get(id).getGroups().add(new GroupsDto(s.getGroupId(), s.getIsActive(), s.getGroupName()));
-        });
+        System.out.println("List<GetStudentsByGroupDto>: " + studentsByGroup);
+        studentsByGroup.forEach(s -> foundStudentsMap.get(s.getStudentId()).getGroups().add(new GroupsDto(s.getGroupId(), s.getIsActive(), s.getGroupName())));
         return new StudentSearchDto(foundStudentsMap.values(), page, pageSize, foundStudents.size());
     }
 
@@ -89,7 +88,7 @@ public class StudentsService {
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void addEntity(StudentsDataDto studentData) {
         List<String> properties = checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
-        if(!properties.get(2).equals("Student")) throw new NotAStudentException();
+        if (!properties.get(2).equals("Student")) throw new NotAStudentException();
         if (!repository.existsByPhoneOrEmail(studentData.getPhone(), studentData.getEmail()) && !contactFeignClient.existsByPhoneOrEmail(studentData.getPhone(), studentData.getEmail())) {
             try {
                 AbstractStudent saved = repository.save(new StudentEntity(studentData));
@@ -100,8 +99,22 @@ public class StudentsService {
             } catch (Exception e) {
                 throw new DatabaseAddingException(e.getMessage());
             }
-        }else
+        } else
             throw new StudentOrContactAlreadyExistsException();
+    }
+
+    @Loggable
+    @Transactional
+    public void promoteEntity(StudentsDataDto studentsDataDto) {
+        try {
+            repository.save(new StudentEntity(studentsDataDto));
+            String log = studentsDataDto.getLogText();
+            rabbitProducer.sendAddLog(
+                    studentsDataDto.getContactId(),
+                    log != null ? log : " - New student promoted from contact. Status: " + studentsDataDto.getStatusId() + ", course: " + studentsDataDto.getTargetCourseId() + ", branch: " + studentsDataDto.getBranchId());
+        } catch (Exception e) {
+            throw new DatabaseAddingException(e.getMessage());
+        }
     }
 
     @Loggable
@@ -135,7 +148,8 @@ public class StudentsService {
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    public void updateById(UUID id, StudentsDataDto studentData) {
+    public void updateById(StudentsDataDto studentData) {
+        UUID id = studentData.getContactId();
         checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId());
         AbstractStudent entity = repository.getByStudentId(id).or(() -> archiveRepository.findById(id)).orElseThrow(() -> new StudentNotFoundException(id.toString()));
         List<String> updates = updateEntity(studentData, entity);
@@ -162,13 +176,13 @@ public class StudentsService {
 
         String email = studentData.getEmail();
         if (!entity.getPhone().equals(email)) {
-            entity.setPhone(email);
+            entity.setEmail(email);
             updates.add("email");
         }
 
         String comment = studentData.getComment();
         if (!entity.getComment().equals(comment)) {
-            entity.setPhone(comment);
+            entity.setComment(comment);
             updates.add("comment");
         }
 
@@ -204,7 +218,8 @@ public class StudentsService {
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void moveToArchiveById(UUID id, String reason) {
         StudentEntity student = repository.findById(id).orElseThrow(() -> new StudentNotFoundException(id.toString()));
-        int statusId = Integer.parseInt(rabbitProducer.sendGetStatusIdByName("Archive"));
+        int statusId = rabbitProducer.sendGetStatusIdByName("Archive");
+        System.out.println("Status received: " + statusId);
         student.setStatusId(statusId);
         StudentsArchiveEntity studentArchEntity = new StudentsArchiveEntity(student, reason);
         try {
@@ -308,7 +323,18 @@ public class StudentsService {
     public <S extends AbstractStudent> List<AbstractStudent> findStudents(Pageable pageable, String search, Integer statusId, UUID group_id, UUID courseId, boolean isCurrentRepository) {
         Specification<S> studentSpecs = getStudentSpecifications(search, statusId, group_id, courseId);
         Page<? extends AbstractStudent> pageContactEntity = isCurrentRepository ? repository.findAll((Specification<StudentEntity>) studentSpecs, pageable) : archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs, pageable);
-        return (List<AbstractStudent>) pageContactEntity.getContent();
+        return new ArrayList<>(pageContactEntity.getContent());
+    }
+
+    @Loggable
+    @SuppressWarnings("unchecked")
+    public <S extends AbstractStudent> List<AbstractStudent> findStudentForContacts(int quantity, String search, Integer statusId, UUID group_id, UUID courseId, boolean isCurrentRepository) {
+        Specification<S> studentSpecs = getStudentSpecifications(search, statusId, group_id, courseId);
+        List<? extends AbstractStudent> pageContactEntity = isCurrentRepository ? repository.findAll((Specification<StudentEntity>) studentSpecs) : archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs);
+        System.out.println("Found students " + pageContactEntity);
+        if (pageContactEntity.size() <= quantity)
+            return (List<AbstractStudent>) pageContactEntity;
+        return (List<AbstractStudent>) pageContactEntity.subList(0, quantity);
     }
 
     public AbstractStudent findByPhoneOrEmailAndDelete(String phone, String email) {

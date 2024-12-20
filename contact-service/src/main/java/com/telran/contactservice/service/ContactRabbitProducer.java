@@ -1,10 +1,9 @@
 package com.telran.contactservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telran.contactservice.dto.AddLogDto;
 import com.telran.contactservice.dto.RabbitMessageDto;
-import com.telran.contactservice.error.Exception.*;
+import com.telran.contactservice.error.Exception.UnsuccessfulRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -58,6 +57,8 @@ public class ContactRabbitProducer {
     private <R> R sendMessage(String type, Object payload, String routingKey, Class<R> responseType) {
         RabbitMessageDto messageDto = sendAndReceiveRabbitMessage(type, payload, routingKey);
         Object result = messageDto.getPayload();
+//        if (messageDto.getType().equals("error"))
+//            throw new UnsuccessfulRequest((String) result);
         if (responseType.isInstance(result)) {
             return responseType.cast(result);
         }
