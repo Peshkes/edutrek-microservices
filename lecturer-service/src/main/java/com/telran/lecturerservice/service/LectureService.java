@@ -151,11 +151,18 @@ public class LectureService {
     @Loggable
     @Transactional
     public void archiveById(UUID uuid, String reason) {
-        BaseLecturer lecturer = deleteById(uuid);
+        LecturerEntity lecturer = repository.findById(uuid).orElseThrow(() -> new LecturerNotFoundException(uuid.toString()));
+        try {
+            repository.delete(lecturer);
+            groupClient.archiveLecturersByLecturerId(uuid);
+        } catch (Exception e) {
+            throw new DatabaseDeletingException(e.getMessage());
+        }
+
         try {
             archiveRepository.save(new LecturerArchiveEntity(lecturer, reason));
             addLog(uuid, "Lecturer archived. Reason: " + reason);
-        } catch (java.lang.Exception e) {
+        } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
     }

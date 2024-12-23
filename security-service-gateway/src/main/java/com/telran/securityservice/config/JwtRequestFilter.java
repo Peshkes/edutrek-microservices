@@ -4,6 +4,7 @@ import com.telran.securityservice.feign.JwtClient;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +26,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         if (checkEndpoint(request.getMethod(), request.getServletPath())) {
-//            String accessToken = jwtService.getAccessToken(request);
-            String authorizationHeader = request.getHeader("Authorization");
-            String accessToken = jwtClient.extractTokenFromAuthorizationHeader(authorizationHeader);
+            String accessToken = getTokenFromCookies(request);
+//            String authorizationHeader = request.getHeader("Authorization");
+//            String accessToken = jwtClient.extractTokenFromAuthorizationHeader(authorizationHeader);
 
             String username = null;
             if (accessToken != null) {
@@ -59,9 +60,18 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private boolean checkEndpoint(String method, String servletPath) {
         boolean isRefresh = method.equals("POST") && servletPath.equals("/auth/refresh");
         boolean isSignIn = method.equals("POST") && servletPath.equals("/auth");
-//        boolean isGetNotification = method.equals("GET") && servletPath.equals("/sse/subscribe/{clientId}");
         return !(isSignIn || isRefresh );
     }
 
-
+    private String getTokenFromCookies(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("accessToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
 }

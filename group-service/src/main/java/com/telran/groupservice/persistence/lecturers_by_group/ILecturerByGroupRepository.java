@@ -12,5 +12,5 @@ import java.util.UUID;
 public interface ILecturerByGroupRepository<T extends BaseLecturerByGroup> extends IJunctionTableRepository, JpaRepository<T, ComposeLecturerKey> {
     void deleteByGroupId(UUID groupId);
     List<T> getByGroupId(UUID uuid);
-    void deleteByLecturerId(UUID lecturerId);
+    List<T> deleteByLecturerId(UUID lecturerId);
 }

@@ -90,15 +90,15 @@ public class GroupController {
         return new ResponseEntity<>("Students archived", HttpStatus.OK);
     }
 
-    @PutMapping("/archive/studentid/{id}")
-    public ResponseEntity<String> archiveStudents(@PathVariable @UUID String id) {
+    @PutMapping("/archive/student/{id}")
+    public ResponseEntity<String> archiveStudent(@PathVariable @UUID String id) {
         groupService.archiveStudentsByStudentId(java.util.UUID.fromString(id));
         return new ResponseEntity<>("Students archived", HttpStatus.OK);
     }
 
-    @DeleteMapping("/delete/studentid/{id}/{iscurrent}")
-    public ResponseEntity<String> deleteByStudentId(@PathVariable @UUID String id, @PathVariable boolean iscurrent) {
-        groupService.deleteByStudentId(java.util.UUID.fromString(id), iscurrent);
+    @DeleteMapping("/student/{id}")
+    public ResponseEntity<String> deleteByStudentId(@PathVariable @UUID String id) {
+        groupService.deleteByStudentId(java.util.UUID.fromString(id));
         return new ResponseEntity<>("Students deleted from groups", HttpStatus.OK);
     }
 

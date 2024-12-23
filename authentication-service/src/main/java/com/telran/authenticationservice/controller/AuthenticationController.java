@@ -57,26 +57,28 @@ public class AuthenticationController {
 
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("")
-//    public ResponseEntity<String> signIn(@Valid @RequestBody AuthenticationDataDto authenticationDataDto, HttpServletResponse response) {
-    public JWTBodyReturnDto signIn(@Valid @RequestBody AuthenticationDataDto authenticationDataDto, HttpServletResponse response) {
-        return authenticationService.signIn(authenticationDataDto);
-//        response.addCookie(createCookie("accessToken", result.getAccessToken()));
-//        response.addCookie(createCookie("refreshToken", result.getRefreshToken()));
+    public ResponseEntity<String> signIn(@Valid @RequestBody AuthenticationDataDto authenticationDataDto, HttpServletResponse response) {
+//    public JWTBodyReturnDto signIn(@Valid @RequestBody AuthenticationDataDto authenticationDataDto, HttpServletResponse response) {
+//        return authenticationService.signIn(authenticationDataDto);
+        JWTBodyReturnDto result = authenticationService.signIn(authenticationDataDto);
+        response.addCookie(createCookie("accessToken", result.getAccessToken()));
+        response.addCookie(createCookie("refreshToken", result.getRefreshToken()));
 
-//        return ResponseEntity.ok("Sign-in successful");
+        return ResponseEntity.ok("Sign-in successful");
     }
 
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/refresh")
-//    public ResponseEntity<String> refreshToken(HttpServletRequest request, HttpServletResponse response) {
-    public JWTBodyReturnDto refreshToken(HttpServletRequest request, HttpServletResponse response) {
-//        String refreshToken = jwtService.getRefreshToken(request);
-        String authHeader = request.getHeader("Authorization");
-        String refreshToken = jwtClient.extractTokenFromAuthorizationHeader(authHeader);
-        return authenticationService.refreshToken(refreshToken);
-//        response.addCookie(createCookie("accessToken", result.getAccessToken()));
-//        response.addCookie(createCookie("refreshToken", result.getRefreshToken()));
-        //  return ResponseEntity.ok("Refresh successful");
+    public ResponseEntity<String> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+//    public JWTBodyReturnDto refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = getTokenFromCookies(request);
+//        String authHeader = request.getHeader("Authorization");
+//        String refreshToken = jwtClient.extractTokenFromAuthorizationHeader(authHeader);
+//        return authenticationService.refreshToken(refreshToken);
+        JWTBodyReturnDto result = authenticationService.refreshToken(refreshToken);
+        response.addCookie(createCookie("accessToken", result.getAccessToken()));
+        response.addCookie(createCookie("refreshToken", result.getRefreshToken()));
+          return ResponseEntity.ok("Refresh successful");
     }
 
     @PostMapping("/logout")
@@ -126,5 +128,17 @@ public class AuthenticationController {
         cookie.setPath("/");
         cookie.setSecure(true);
         return cookie;
+    }
+
+    private String getTokenFromCookies(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("refreshToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 }

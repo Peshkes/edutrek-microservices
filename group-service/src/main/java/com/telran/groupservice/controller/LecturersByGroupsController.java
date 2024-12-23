@@ -25,4 +25,10 @@ public class LecturersByGroupsController {
     public void deleteArchiveLecturersByLecturerId(@PathVariable String lecturer_id) {
         service.deleteArchiveLecturersByLecturerId(UUID.fromString(lecturer_id));
     }
+
+    @ResponseStatus(HttpStatus.OK)
+    @PutMapping("/lecturers_by_groups/archive/{lecturer_id}")
+    public void archiveLecturersByLecturerId(@PathVariable UUID lecturer_id) {
+        service.archiveLecturersByLecturerId(lecturer_id);
+    }
 }

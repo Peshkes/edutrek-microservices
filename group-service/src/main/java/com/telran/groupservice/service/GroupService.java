@@ -109,22 +109,6 @@ public class GroupService {
         }
     }
 
-    //    @Bean
-//    public RequestInterceptor customHeaderInterceptor() {
-//        return (RequestTemplate template) -> {
-//            ServletRequestAttributes attributes =
-//                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-//
-//            if (attributes != null) {
-//                String customId = attributes.getRequest().getHeader("X-Request-ID");
-//                if (customId != null) {
-//                    template.header("X-Request-Id", customId);
-//                }
-//            }
-//        };
-//    }
-
-
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
@@ -147,19 +131,6 @@ public class GroupService {
             deleteGroupData(groupId, archiveRepository, lecturersByGroupArchiveRepository, studentsByGroupArchiveRepository);
         } else {
             throw new GroupNotFoundException(String.valueOf(groupId));
-        }
-    }
-
-    private void deleteGroupData(UUID groupId, IGroupRepository<? extends BaseGroup> groupRepo, ILecturerByGroupRepository<? extends BaseLecturerByGroup> lecturerRepo,
-                                 IStudentsByGroupRepository<? extends BaseStudentsByGroup> studentRepo) {
-        try {
-            lecturerRepo.deleteByGroupId(groupId);
-            studentRepo.deleteByGroupId(groupId);
-            lessonsByWeekdayRepository.deleteByGroupId(groupId);
-            webinarsByWeekdayRepository.deleteByGroupId(groupId);
-            groupRepo.deleteGroupByGroupId(groupId);
-        } catch (Exception e) {
-            throw new DatabaseDeletingException(e.getMessage());
         }
     }
 
@@ -204,7 +175,6 @@ public class GroupService {
 
         if (groupData.getGroupName() != null) groupEntity.setGroupName(groupData.getGroupName());
         if (groupData.getFinishDate() != null) groupEntity.setFinishDate(groupData.getFinishDate());
-        if (groupData.getIsActive() != null) groupEntity.setIsActive(groupData.getIsActive());
         if (groupData.getCourseId() != null && !rabbitProducer.sendCourseExists(groupData.getCourseId()))
             groupEntity.setCourseId(groupData.getCourseId());
         if (groupData.getSlackLink() != null) groupEntity.setSlackLink(groupData.getSlackLink());
@@ -309,9 +279,7 @@ public class GroupService {
     @Transactional
     public void graduateById(UUID uuid) {
         GroupEntity groupEntity = repository.findById(uuid).orElseThrow(() -> new GroupNotFoundException(String.valueOf(uuid)));
-        groupEntity.setIsActive(false);
         try {
-            groupEntity.setIsActive(false);
             for (StudentsByGroupEntity student : studentsByGroupRepository.getByGroupId(uuid)) {
                 student.setIsActive(false);
                 studentsByGroupArchiveRepository.save(new StudentsByGroupArchiveEntity(student));
@@ -324,11 +292,7 @@ public class GroupService {
         }
 
         try {
-            studentsByGroupRepository.deleteByGroupId(uuid);
-            lecturersByGroupRepository.deleteByGroupId(uuid);
-            lessonsByWeekdayRepository.deleteByGroupId(uuid);
-            webinarsByWeekdayRepository.deleteByGroupId(uuid);
-            repository.delete(groupEntity);
+            deleteGroupData(uuid, repository, lecturersByGroupRepository, studentsByGroupRepository);
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }
@@ -344,36 +308,45 @@ public class GroupService {
         }
     }
 
+    @Loggable
+    @Transactional
+    public void deleteByStudentId(UUID studentId) {
+        List<BaseStudentsByGroup> groups = isCurrent ? studentsByGroupRepository.findByStudentId(studentId) : studentsByGroupArchiveRepository.findByStudentId(studentId);
+        if (groups != null && !groups.isEmpty()) {
+            for (BaseStudentsByGroup group : groups) {
+                try {
+                    if (isCurrent) repository.deleteGroupByGroupId(group.getGroupId());
+                    else archiveRepository.deleteGroupByGroupId(group.getGroupId());
+                } catch (Exception e) {
+                    throw new DatabaseUpdatingException(e.getMessage());
+                }
+            }
+        }
+    }
+
+    private void deleteGroupData(UUID groupId, IGroupRepository<? extends BaseGroup> groupRepo, ILecturerByGroupRepository<? extends BaseLecturerByGroup> lecturerRepo,
+                                 IStudentsByGroupRepository<? extends BaseStudentsByGroup> studentRepo) {
+        try {
+            lecturerRepo.deleteByGroupId(groupId);
+            studentRepo.deleteByGroupId(groupId);
+            lessonsByWeekdayRepository.deleteByGroupId(groupId);
+            webinarsByWeekdayRepository.deleteByGroupId(groupId);
+            groupRepo.deleteGroupByGroupId(groupId);
+        } catch (Exception e) {
+            throw new DatabaseDeletingException(e.getMessage());
+        }
+    }
 
     private GroupEntity constructEntity(AddGroupDto group) {
         return new GroupEntity(
                 group.getGroupName(),
                 group.getStartDate(),
                 group.getFinishDate(),
-                group.getIsActive(),
                 group.getCourseId(),
                 group.getSlackLink(),
                 group.getWhatsAppLink(),
                 group.getSkypeLink(),
                 group.getDeactivateAfter()
         );
-    }
-
-    @Loggable
-    @Transactional
-    public void deleteByStudentId(UUID studentId, boolean isCurrent) {
-        List<BaseStudentsByGroup> groups = isCurrent ? studentsByGroupRepository.findByStudentId(studentId) : studentsByGroupArchiveRepository.findByStudentId(studentId);
-        if (groups != null && !groups.isEmpty()) {
-            for (BaseStudentsByGroup group : groups) {
-                try {
-                    if (isCurrent)
-                        repository.deleteGroupByGroupId(group.getGroupId());
-                    else
-                        archiveRepository.deleteGroupByGroupId(group.getGroupId());
-                } catch (Exception e) {
-                    throw new DatabaseUpdatingException(e.getMessage());
-                }
-            }
-        }         //throw new GroupNotFoundException(String.valueOf(studentId));
     }
 }
