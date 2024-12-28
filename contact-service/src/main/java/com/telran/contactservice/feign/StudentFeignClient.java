@@ -19,6 +19,9 @@ public interface StudentFeignClient {
     @RequestMapping(method = RequestMethod.GET, value = "/students/exists/{id}")
     boolean existsById(@PathVariable UUID id);
 
+    @RequestMapping(method = RequestMethod.GET, value = "/students")
+    ContactSearchDto getAll();
+
     @RequestMapping(method = RequestMethod.GET, value = "/students/find/{phone}/{email}")
     AbstractStudentDto findByPhoneOrEmailAndDelete(@PathVariable String phone, @PathVariable String email);
 

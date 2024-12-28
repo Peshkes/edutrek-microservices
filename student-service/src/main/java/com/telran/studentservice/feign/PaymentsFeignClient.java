@@ -3,9 +3,12 @@ package com.telran.studentservice.feign;
 import com.telran.studentservice.config.FeignConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 
@@ -17,5 +20,8 @@ public interface PaymentsFeignClient {
 
     @RequestMapping(method = RequestMethod.PUT, value = "/payments/archive/{id}")
     void moveToArchiveById(@PathVariable UUID id);
+
+    @RequestMapping(method = RequestMethod.POST, value = "/payments/studentids")
+    Map<UUID, Integer> getStudentsByGroup(@RequestBody Set<UUID> id);
 
 }

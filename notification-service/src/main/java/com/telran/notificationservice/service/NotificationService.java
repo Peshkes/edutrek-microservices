@@ -113,13 +113,13 @@ public class NotificationService {
 
     @Loggable
     @Transactional
-    public void updateById(UUID id, @Valid NotificationDataDto notificationDataDto, EntityTypes entityType) {
+    public void updateById(UUID entityId, @Valid NotificationDataDto notificationDataDto, EntityTypes entityType) {
         TargetEntityDataDto<? extends AbstractNotificationDocument> targetEntityDataDto = chooseRepository(entityType);
         INotificationsRepository<? extends AbstractNotificationDocument> repository = targetEntityDataDto.getRepository();
-        if (!repository.existsById(id))
-            throw new NotificationNotFoundException(id.toString());
+        if (!repository.existsById(entityId))
+            throw new NotificationNotFoundException(entityId.toString());
         try {
-            repository.updateNotificationDocumentsByNotificationId(id, notificationDataDto.getNotificationId(), notificationDataDto.getScheduledTime(), notificationDataDto.getNotificationText());
+            repository.updateNotificationDocumentsByNotificationId(entityId, notificationDataDto.getNotificationId(), notificationDataDto.getScheduledTime(), notificationDataDto.getNotificationText());
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }

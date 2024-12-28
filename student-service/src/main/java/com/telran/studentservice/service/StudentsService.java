@@ -3,7 +3,9 @@ package com.telran.studentservice.service;
 import com.telran.studentservice.dto.*;
 import com.telran.studentservice.error.DatabaseException.DatabaseAddingException;
 import com.telran.studentservice.error.DatabaseException.DatabaseDeletingException;
-import com.telran.studentservice.error.Exceptions.*;
+import com.telran.studentservice.error.Exceptions.NotAStudentException;
+import com.telran.studentservice.error.Exceptions.StudentNotFoundException;
+import com.telran.studentservice.error.Exceptions.StudentOrContactAlreadyExistsException;
 import com.telran.studentservice.feign.ContactFeignClient;
 import com.telran.studentservice.feign.GroupFeignClient;
 import com.telran.studentservice.feign.PaymentsFeignClient;
@@ -25,10 +27,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
@@ -49,28 +48,70 @@ public class StudentsService {
     private final PaymentsFeignClient paymentsFeignClient;
     private final GroupFeignClient groupFeignClient;
 
+//    @Loggable
+//    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
+//    public StudentSearchDto getAll(int page, int pageSize, String search, Integer statusId, UUID groupId, UUID courseId) {
+//        String statusName = statusId == null ? null : rabbitProducer.sendGetStatusNameById(statusId);
+//        Pageable pageable = PageRequest.of(page, pageSize);
+//        List<AbstractStudent> foundStudents;
+//        if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
+//            foundStudents = findStudents(pageable, search, statusId, courseId, false);
+//        } else {
+//            foundStudents = findStudents(pageable, search, statusId, courseId, true);
+//            if (foundStudents.size() < pageSize) {
+//                List<AbstractStudent> foundStudentsArchive = findStudents(PageRequest.of(page, pageSize - foundStudents.size()), search, statusId, courseId, false);
+//                if (!foundStudentsArchive.isEmpty())
+//                    foundStudents.addAll(foundStudentsArchive);
+//            }
+//        }
+//        List<StudentWithGroupDto> studentWithGroupsAndPayments = addGroupsAndPaymentAmountToFoundStudents(foundStudents);
+//        if (groupId != null)
+//            studentWithGroupsAndPayments = studentWithGroupsAndPayments.stream().filter(s -> s.getGroups().stream()
+//                    .anyMatch(group -> group.getGroupId().equals(groupId))).toList();
+//        return new StudentSearchDto(studentWithGroupsAndPayments, page, pageSize, foundStudents.size());
+//    }
+
     @Loggable
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    public StudentSearchDto getAll(int page, int pageSize, String search, Integer statusId, UUID groupId, UUID courseId) {
+    public StudentSearchDto getAllStudentsWithFilters(int page, int pageSize, String search, Integer statusId, UUID groupId, UUID courseId) {
         String statusName = statusId == null ? null : rabbitProducer.sendGetStatusNameById(statusId);
         Pageable pageable = PageRequest.of(page, pageSize);
-        List<AbstractStudent> foundStudents;
+        StudentServiceNestedObject getAllFilteredStudents;
         if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
-            foundStudents = findStudents(pageable, search, statusId, groupId, courseId, false);
+            getAllFilteredStudents = new StudentServiceNestedObject(archiveRepository.findStudentsWithFilters(search, statusId, courseId, groupId, pageable));
         } else {
-            foundStudents = findStudents(pageable, search, statusId, groupId, courseId, true);
-            if (foundStudents.size() < pageSize) {
-                List<AbstractStudent> foundStudentsArchive = findStudents(PageRequest.of(page, pageSize - foundStudents.size()), search, statusId, groupId, courseId, false);
-                if (!foundStudentsArchive.isEmpty())
-                    foundStudents.addAll(foundStudentsArchive);
-            }
+            getAllFilteredStudents = new StudentServiceNestedObject(repository.findStudentsWithFilters(search, statusId, courseId, groupId, pageable));
+            int foundSize = getAllFilteredStudents.getFoundStudents().size();
+            if (foundSize < pageSize) {
+                int archiveElementsSize = (page + 1) * pageSize - (int) getAllFilteredStudents.getElementsCount();
+                Pageable additionalPageable = PageRequest.of(0, archiveElementsSize);
+                int offset = page != 0 ? archiveElementsSize - pageSize : 0;
+                StudentServiceNestedObject getAllFilteredArchiveStudents = new StudentServiceNestedObject(archiveRepository.findStudentsWithFilters(search, statusId, courseId, groupId, additionalPageable));
+                getAllFilteredStudents.setElementsCount(getAllFilteredStudents.getElementsCount() + getAllFilteredArchiveStudents.getStudentsPaged().getTotalElements());
+                List<AbstractStudent> foundArchiveStudents = getAllFilteredArchiveStudents.getFoundStudents();
+                int archiveSize = foundArchiveStudents.size();
+                if (archiveSize >= offset)
+                    getAllFilteredStudents.getFoundStudents().addAll(foundArchiveStudents.subList(offset, archiveSize));            }
         }
-        Map<UUID, StudentWithGroupDto> foundStudentsMap = foundStudents.stream().collect(Collectors.toMap(AbstractStudent::getStudentId, StudentWithGroupDto::new));
-        System.out.println("Map<UUID, StudentWithGroupDto>: " + foundStudentsMap);
-        List<GetStudentsByGroupDto> studentsByGroup = groupFeignClient.getStudentsByGroup(foundStudentsMap.keySet());
-        System.out.println("List<GetStudentsByGroupDto>: " + studentsByGroup);
-        studentsByGroup.forEach(s -> foundStudentsMap.get(s.getStudentId()).getGroups().add(new GroupsDto(s.getGroupId(), s.getIsActive(), s.getGroupName())));
-        return new StudentSearchDto(foundStudentsMap.values(), page, pageSize, foundStudents.size());
+        return new StudentSearchDto(addGroupsAndPaymentAmountToFoundStudents(getAllFilteredStudents.getFoundStudents()), page, pageSize, getAllFilteredStudents.getElementsCount());
+    }
+
+    private List<StudentWithGroupDto> addGroupsAndPaymentAmountToFoundStudents(List<? extends AbstractStudent> foundStudents) {
+        Set<UUID> keysToRequest = foundStudents.stream().map(AbstractStudent::getStudentId).collect(Collectors.toSet());
+        Map<UUID, List<GetStudentsByGroupDto>> studentsByGroup = groupFeignClient.getStudentsByGroup(keysToRequest);
+        Map<UUID, Integer> studentPaymentInfo = paymentsFeignClient.getStudentsByGroup(keysToRequest);
+        return foundStudents.stream().map(s -> {
+            UUID id = s.getStudentId();
+            StudentWithGroupDto student = new StudentWithGroupDto(s);
+            if (studentPaymentInfo.containsKey(id))
+                student.setAmountAlreadyPayed(studentPaymentInfo.get(id));
+            if (studentsByGroup.containsKey(id)) {
+                List<GetStudentsByGroupDto> groups = studentsByGroup.get(id);
+                if (!groups.isEmpty())
+                    groups.forEach(g -> student.getGroups().add(new GroupsDto(g.getGroupId(), g.getIsActive(), g.getGroupName())));
+            }
+            return student;
+        }).toList();
     }
 
     @Loggable
@@ -86,7 +127,7 @@ public class StudentsService {
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    public void addEntity(StudentsDataDto studentData) {
+    public void addEntity(StudentsAddDataDto studentData) {
         List<String> properties = checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId(), studentData.getStatusId());
         if (!properties.get(2).equals("Student")) throw new NotAStudentException();
         if (!repository.existsByPhoneOrEmail(studentData.getPhone(), studentData.getEmail()) && !contactFeignClient.existsByPhoneOrEmail(studentData.getPhone(), studentData.getEmail())) {
@@ -105,7 +146,7 @@ public class StudentsService {
 
     @Loggable
     @Transactional
-    public void promoteEntity(StudentsDataDto studentsDataDto) {
+    public void promoteEntity(StudentsPromoteDataDto studentsDataDto) {
         try {
             repository.save(new StudentEntity(studentsDataDto));
             String log = studentsDataDto.getLogText();
@@ -126,7 +167,7 @@ public class StudentsService {
                 throw new StudentNotFoundException(id.toString());
             } else {
                 try {
-                    groupFeignClient.deleteByStudentId(id, !IS_CURRENT_REPOSITORY);
+                    groupFeignClient.deleteByStudentId(id);
                     paymentsFeignClient.deletePaymentByStudentId(id);
                     archiveRepository.deleteById(id);
                 } catch (Exception e) {
@@ -135,7 +176,7 @@ public class StudentsService {
             }
         } else {
             try {
-                groupFeignClient.deleteByStudentId(id, IS_CURRENT_REPOSITORY);
+                groupFeignClient.deleteByStudentId(id);
                 paymentsFeignClient.deletePaymentByStudentId(id);
                 repository.deleteById(id);
             } catch (Exception e) {
@@ -148,7 +189,7 @@ public class StudentsService {
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    public void updateById(StudentsDataDto studentData) {
+    public void updateById(StudentsPromoteDataDto studentData) {
         UUID id = studentData.getContactId();
         checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId());
         AbstractStudent entity = repository.getByStudentId(id).or(() -> archiveRepository.findById(id)).orElseThrow(() -> new StudentNotFoundException(id.toString()));
@@ -159,7 +200,7 @@ public class StudentsService {
                 log != null ? log : " - Contact updated. Updated info: " + updates);
     }
 
-    private <T extends AbstractStudent> List<String> updateEntity(StudentsDataDto studentData, T entity) {
+    private <T extends AbstractStudent> List<String> updateEntity(StudentsPromoteDataDto studentData, T entity) {
         List<String> updates = new ArrayList<>();
 
         String name = studentData.getContactName();
@@ -214,24 +255,24 @@ public class StudentsService {
 
 
     @Loggable
-    @Transactional
+    //@Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
     public void moveToArchiveById(UUID id, String reason) {
         StudentEntity student = repository.findById(id).orElseThrow(() -> new StudentNotFoundException(id.toString()));
         int statusId = rabbitProducer.sendGetStatusIdByName("Archive");
-        System.out.println("Status received: " + statusId);
         student.setStatusId(statusId);
         StudentsArchiveEntity studentArchEntity = new StudentsArchiveEntity(student, reason);
         try {
             archiveRepository.save(studentArchEntity);
             paymentsFeignClient.moveToArchiveById(id);
-            groupFeignClient.archiveStudents(id);
+            groupFeignClient.archiveStudent(id);
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
         try {
             repository.deleteById(id);
         } catch (Exception e) {
+            archiveRepository.deleteById(id);
             throw new DatabaseDeletingException(e.getMessage());
         }
         rabbitProducer.sendAddLog(
@@ -320,21 +361,47 @@ public class StudentsService {
 
     @Loggable
     @SuppressWarnings("unchecked")
-    public <S extends AbstractStudent> List<AbstractStudent> findStudents(Pageable pageable, String search, Integer statusId, UUID group_id, UUID courseId, boolean isCurrentRepository) {
-        Specification<S> studentSpecs = getStudentSpecifications(search, statusId, group_id, courseId);
+    public <S extends AbstractStudent> List<AbstractStudent> findStudents(Pageable pageable, String search, Integer statusId, UUID courseId, boolean isCurrentRepository) {
+        Specification<S> studentSpecs = getStudentSpecifications(search, statusId, courseId);
         Page<? extends AbstractStudent> pageContactEntity = isCurrentRepository ? repository.findAll((Specification<StudentEntity>) studentSpecs, pageable) : archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs, pageable);
         return new ArrayList<>(pageContactEntity.getContent());
     }
 
+    //    @Loggable
+//    @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
+//    public StudentSearchDto getAllStudentsWithFilters(int page, int pageSize, String search, Integer statusId, UUID groupId, UUID courseId) {
+//        String statusName = statusId == null ? null : rabbitProducer.sendGetStatusNameById(statusId);
+//        Pageable pageable = PageRequest.of(page, pageSize);
+//        StudentServiceNestedObject getAllFilteredStudents;
+//        if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
+//            getAllFilteredStudents = new StudentServiceNestedObject(archiveRepository.findStudentsWithFilters(search, statusId, courseId, groupId, pageable));
+//        } else {
+//            getAllFilteredStudents = new StudentServiceNestedObject(repository.findStudentsWithFilters(search, statusId, courseId, groupId, pageable));
+//            int foundSize = getAllFilteredStudents.getFoundStudents().size();
+//            if (foundSize < pageSize) {
+//                int archiveElementsSize = (page + 1) * pageSize - (int) getAllFilteredStudents.getElementsCount();
+//                Pageable additionalPageable = PageRequest.of(0, archiveElementsSize);
+//                int offset = page != 0 ? archiveElementsSize - pageSize : 0;
+//                StudentServiceNestedObject getAllFilteredArchiveStudents = new StudentServiceNestedObject(archiveRepository.findStudentsWithFilters(search, statusId, courseId, groupId, additionalPageable));
+//                getAllFilteredStudents.setElementsCount(getAllFilteredStudents.getElementsCount() + getAllFilteredArchiveStudents.getStudentsPaged().getTotalElements());
+//                List<AbstractStudent> foundArchiveStudents = getAllFilteredArchiveStudents.getFoundStudents();
+//                int archiveSize = foundArchiveStudents.size();
+//                if (archiveSize >= offset)
+//                    getAllFilteredStudents.getFoundStudents().addAll(foundArchiveStudents.subList(offset, archiveSize));            }
+//        }
+//        return new StudentSearchDto(addGroupsAndPaymentAmountToFoundStudents(getAllFilteredStudents.getFoundStudents()), page, pageSize, getAllFilteredStudents.getElementsCount());
+//    }
+
     @Loggable
     @SuppressWarnings("unchecked")
-    public <S extends AbstractStudent> List<AbstractStudent> findStudentForContacts(int quantity, String search, Integer statusId, UUID group_id, UUID courseId, boolean isCurrentRepository) {
-        Specification<S> studentSpecs = getStudentSpecifications(search, statusId, group_id, courseId);
-        List<? extends AbstractStudent> pageContactEntity = isCurrentRepository ? repository.findAll((Specification<StudentEntity>) studentSpecs) : archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs);
-        System.out.println("Found students " + pageContactEntity);
-        if (pageContactEntity.size() <= quantity)
-            return (List<AbstractStudent>) pageContactEntity;
-        return (List<AbstractStudent>) pageContactEntity.subList(0, quantity);
+    public <S extends AbstractStudent> List<StudentWithGroupDto> findStudentForContacts(String search, Integer statusId, UUID courseId, boolean isCurrentRepository, Pageable pageable, int offset) {
+        Specification<S> studentSpecs = getStudentSpecifications(search, statusId, courseId);
+        List<? extends AbstractStudent> pageContactEntity = isCurrentRepository ? repository.findAll((Specification<StudentEntity>) studentSpecs,pageable).getContent() : archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs, pageable).getContent();
+        List<StudentWithGroupDto> studentWithGroup = addGroupsAndPaymentAmountToFoundStudents(pageContactEntity);
+        int size = studentWithGroup.size();
+        if (size >= offset)
+            return studentWithGroup.subList(offset, size);
+        return studentWithGroup;
     }
 
     public AbstractStudent findByPhoneOrEmailAndDelete(String phone, String email) {

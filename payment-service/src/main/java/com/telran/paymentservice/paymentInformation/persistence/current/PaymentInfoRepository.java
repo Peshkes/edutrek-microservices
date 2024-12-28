@@ -11,8 +11,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface PaymentInfoRepository extends IPaymentInfoRepository<PaymentInfoEntity>,JpaRepository<PaymentInfoEntity, UUID>, JpaSpecificationExecutor<PaymentInfoEntity> {
-
+public interface PaymentInfoRepository extends IPaymentInfoRepository<PaymentInfoEntity>, JpaRepository<PaymentInfoEntity, UUID>, JpaSpecificationExecutor<PaymentInfoEntity> {
     Optional<List<PaymentInfoEntity>> findByStudentId(UUID studentId);
+
 
 }
