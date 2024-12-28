@@ -9,4 +9,6 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface PaymentInfoArchiveRepository extends IPaymentInfoRepository<PaymentInfoArchiveEntity>,JpaRepository<PaymentInfoArchiveEntity, UUID>, JpaSpecificationExecutor<PaymentInfoArchiveEntity> {}
+public interface PaymentInfoArchiveRepository extends IPaymentInfoRepository<PaymentInfoArchiveEntity>,JpaRepository<PaymentInfoArchiveEntity, UUID>, JpaSpecificationExecutor<PaymentInfoArchiveEntity> {
+
+}

@@ -30,7 +30,7 @@ public class StudentsController {
             @RequestParam(name = "statusid", required = false) Integer statusId,
             @RequestParam(name = "groupid", required = false) UUID groupId,
             @RequestParam(name = "targetcourseid", required = false) UUID courseId) {
-        return studentService.getAll(page,pageSize,search,statusId,groupId, courseId);
+        return studentService.getAllStudentsWithFilters(page, pageSize, search, statusId, groupId, courseId);
     }
 
     @GetMapping("/{id}")
@@ -54,23 +54,23 @@ public class StudentsController {
     @PostMapping("/find_students")
     @ResponseStatus(HttpStatus.OK)
     public List<AbstractStudent> findStudents(@RequestBody FindStudentsDto findStudentsDto) {
-        return studentService.findStudents(findStudentsDto.getPageable(),findStudentsDto.getSearch(), findStudentsDto.getStatusId(), findStudentsDto.getGroup_id(), findStudentsDto.getCourseId(),findStudentsDto.isCurrentRepository());
+        return studentService.findStudents(findStudentsDto.getPageable(), findStudentsDto.getSearch(), findStudentsDto.getStatusId(), findStudentsDto.getCourseId(), findStudentsDto.isCurrentRepository());
     }
 
     @PostMapping("/find_students_contacts")
     @ResponseStatus(HttpStatus.OK)
-    public List<AbstractStudent> findStudentsForContacts(@RequestBody FindStudentsForContactsDto findStudentsDto) {
-        return studentService.findStudentForContacts(findStudentsDto.getQuantity(),findStudentsDto.getSearch(), findStudentsDto.getStatusId(), findStudentsDto.getGroup_id(), findStudentsDto.getCourseId(),findStudentsDto.isCurrentRepository());
+    public List<StudentWithGroupDto> findStudentsForContacts(@RequestBody FindStudentsForContactsDto findStudentsDto) {
+        return studentService.findStudentForContacts(findStudentsDto.getSearch(), findStudentsDto.getStatusId(), findStudentsDto.getCourseId(), findStudentsDto.isCurrentRepository(), findStudentsDto.getPageable(), findStudentsDto.getOffset());
     }
 
     @PostMapping("/promote")
-    public ResponseEntity<String> promoteEntity(@RequestBody @Valid StudentsDataDto studentsDataDto) {
+    public ResponseEntity<String> promoteEntity(@RequestBody @Valid StudentsPromoteDataDto studentsDataDto) {
         studentService.promoteEntity(studentsDataDto);
         return new ResponseEntity<>("Student created", HttpStatus.CREATED);
     }
 
     @PostMapping("")
-    public ResponseEntity<String> addEntity(@RequestBody @Valid StudentsDataDto studentDto) {
+    public ResponseEntity<String> addEntity(@RequestBody @Valid StudentsAddDataDto studentDto) {
         studentService.addEntity(studentDto);
         return new ResponseEntity<>("Student created", HttpStatus.CREATED);
     }
@@ -84,13 +84,13 @@ public class StudentsController {
 
 
     @PutMapping("")
-    public ResponseEntity<String> updateById(@RequestBody @Valid StudentsDataDto contactData) {
+    public ResponseEntity<String> updateById(@RequestBody @Valid StudentsPromoteDataDto contactData) {
         studentService.updateById(contactData);
         return new ResponseEntity<>("Student updated", HttpStatus.OK);
     }
 
     @PutMapping("/archive/{id}/{reason}")
-    public ResponseEntity<String> moveToArchiveById(@PathVariable UUID id,@PathVariable @DefaultValue("") String reason) {
+    public ResponseEntity<String> moveToArchiveById(@PathVariable UUID id, @PathVariable @DefaultValue("") String reason) {
         studentService.moveToArchiveById(id, reason);
         return new ResponseEntity<>("Student moved to archive", HttpStatus.OK);
     }

@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -32,8 +34,15 @@ public class PaymentInfoController {
     public PaymentsInfoSearchDto getByStudentId(
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "pagesize", defaultValue = "10") int pageSize,
+            @RequestParam(name = "iscurrent") boolean isCurrent,
             @PathVariable UUID id) {
-        return paymentInfoService.getByStudentId(page, pageSize, id);
+        return paymentInfoService.getByStudentId(page, pageSize, id, isCurrent);
+    }
+
+    @PostMapping("/studentids")
+    @ResponseStatus(HttpStatus.OK)
+    public Map<UUID, Integer> findAllByStudentId(@RequestBody Set<UUID> studentIds) {
+        return paymentInfoService.getAllByStudentId(studentIds);
     }
 
     @DeleteMapping("/studentid/{id}")
@@ -43,7 +52,7 @@ public class PaymentInfoController {
     }
 
     @PostMapping("")
-    public ResponseEntity<String> addNewCourse(@RequestBody @Valid PaymentInfoDataDto paymentInfoData) {
+    public ResponseEntity<String> addNewPaymentToStudent(@RequestBody @Valid PaymentInfoDataDto paymentInfoData) {
         paymentInfoService.addEntity(paymentInfoData);
         return new ResponseEntity<>("Payment info created", HttpStatus.CREATED);
     }

@@ -1,6 +1,5 @@
-package com.telran.studentservice.dto;
+package com.telran.contactservice.dto;
 
-import com.telran.studentservice.persistence.AbstractStudent;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,7 +25,7 @@ public class StudentWithGroupDto {
     private List<GroupsDto> groups;
     private int amountAlreadyPayed;
 
-    public StudentWithGroupDto(AbstractStudent abstractStudent) {
+    public StudentWithGroupDto(AbstractStudentDto abstractStudent) {
         this.studentId = abstractStudent.getStudentId();
         this.contactName = abstractStudent.getContactName();
         this.phone = abstractStudent.getPhone();

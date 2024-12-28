@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -20,4 +22,21 @@ public class AbstractStudentDto {
     private String comment;
     private int fullPayment;
     private boolean documentsDone;
+    private List<GroupsDto> groups;
+    private int amountAlreadyPayed;
+
+//    public AbstractStudentDto(UUID studentId, String contactName, String phone, String email, int statusId, int branchId, UUID targetCourseId, String comment, int fullPayment, boolean documentsDone, List<GroupsDto> groups, int amountAlreadyPayed) {
+//        this.studentId = studentId;
+//        this.contactName = contactName;
+//        this.phone = phone;
+//        this.email = email;
+//        this.statusId = statusId;
+//        this.branchId = branchId;
+//        this.targetCourseId = targetCourseId;
+//        this.comment = comment;
+//        this.fullPayment = fullPayment;
+//        this.documentsDone = documentsDone;
+//        this.groups = groups == null ? new ArrayList<>() : groups;
+//        this.amountAlreadyPayed = amountAlreadyPayed;
+//    }
 }
