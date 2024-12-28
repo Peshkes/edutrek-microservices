@@ -31,17 +31,17 @@ public class AbstractPaymentInformation {
     private int paymentTypeId;
 
     @Column(name = "payment_amount")
-    private int paymentUmount;
+    private int paymentAmount;
 
     @Column(name = "payment_details")
     private String paymentDetails;
 
-    public AbstractPaymentInformation(UUID studentNum, int paymentTypeId, int paymentUmount, String paymentDetails) {
+    public AbstractPaymentInformation(UUID studentNum, int paymentTypeId, int paymentAmount, String paymentDetails) {
         this.paymentId = UUID.randomUUID();
         this.studentId = studentNum;
         this.paymentDate = LocalDate.now();
         this.paymentTypeId = paymentTypeId;
-        this.paymentUmount = paymentUmount;
+        this.paymentAmount = paymentAmount;
         this.paymentDetails = paymentDetails;
     }
 
@@ -50,7 +50,7 @@ public class AbstractPaymentInformation {
         this.studentId = paymentInfoEntity.getStudentId();
         this.paymentDate = paymentInfoEntity.getPaymentDate();
         this.paymentTypeId = paymentInfoEntity.getPaymentTypeId();
-        this.paymentUmount = paymentInfoEntity.getPaymentUmount();
+        this.paymentAmount = paymentInfoEntity.getPaymentAmount();
         this.paymentDetails = paymentInfoEntity.getPaymentDetails();
     }
 }

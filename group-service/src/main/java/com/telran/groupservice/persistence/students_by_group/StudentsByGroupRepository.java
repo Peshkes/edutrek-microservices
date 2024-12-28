@@ -15,6 +15,7 @@ public interface StudentsByGroupRepository extends IStudentsByGroupRepository<St
     @Modifying
     void deleteByGroupId(@Param("id") UUID groupId);
     List<StudentsByGroupEntity> getByGroupId(@Param("id") UUID uuid);
+    List<StudentsByGroupEntity> getByStudentId(@Param("id") UUID uuid);
     Optional<BaseStudentsByGroup> getByGroupIdAndStudentId(@Param("groupId") UUID groupId, @Param("studentId") UUID studentId);
 
     @Query("SELECT new com.telran.groupservice.dto.GetStudentsByGroupDto(sbg.groupId, sbg.studentId, sbg.isActive, g.groupName) " +

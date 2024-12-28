@@ -85,7 +85,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/logs/{id}").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/notifications/{entityType}/{id}", "/notifications/entityTypes", "/notifications/subscribe/{clientId}").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/notifications/{entityType}/{id}").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/notifications/{entityType}/{id}").access(ownerAuthorizationManager)
                         .requestMatchers(HttpMethod.DELETE, "/notifications/{entityType}", "/notifications").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/notifications/{entityType}/{id}").authenticated()
 

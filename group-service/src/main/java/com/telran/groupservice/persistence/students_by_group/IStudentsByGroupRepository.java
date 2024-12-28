@@ -24,4 +24,13 @@ public interface IStudentsByGroupRepository<T extends BaseStudentsByGroup> exten
     Optional<BaseStudentsByGroup> getByGroupIdAndStudentId(UUID groupId, UUID studentId);
 
     List<BaseStudentsByGroup> findByStudentId(UUID studentId);
+
+    //List<BaseStudentsByGroup> findByStudentId(UUID studentId);
+
+    @Query("SELECT new com.telran.groupservice.dto.GetStudentsByGroupDto(sbg.groupId, sbg.studentId, sbg.isActive, g.groupName) " +
+            "FROM StudentsByGroupEntity sbg INNER JOIN GroupEntity g ON sbg.groupId = g.groupId " +
+            "WHERE sbg.studentId IN :studentIds")
+    List<GetStudentsByGroupDto> findGroupsByStudentIds(Set<UUID> studentIds);
+
+    void deleteAllByStudentId(UUID studentId);
 }

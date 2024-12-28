@@ -3,7 +3,10 @@ package com.telran.contactservice.service;
 import com.telran.contactservice.dto.*;
 import com.telran.contactservice.error.DatabaseException.DatabaseAddingException;
 import com.telran.contactservice.error.DatabaseException.DatabaseDeletingException;
-import com.telran.contactservice.error.Exception.*;
+import com.telran.contactservice.error.Exception.ContactAlreadyExistsException;
+import com.telran.contactservice.error.Exception.ContactNotFoundException;
+import com.telran.contactservice.error.Exception.PromoteUnsuccesfull;
+import com.telran.contactservice.error.Exception.StudentAlreadyExistsException;
 import com.telran.contactservice.feign.StudentFeignClient;
 import com.telran.contactservice.logging.Loggable;
 import com.telran.contactservice.persistence.AbstractContacts;
@@ -18,6 +21,7 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -32,7 +36,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -52,32 +55,44 @@ public class ContactsService {
     public ContactSearchDto getAll(int page, int pageSize, String search, Integer statusId, UUID courseId) {
         String statusName = statusId == null ? null : rabbitProducer.sendGetStatusNameById(statusId);
         Pageable pageable = PageRequest.of(page, pageSize);
+        List<Object> foundContacts;
+        Specification<ContactsEntity> contactSpecs = new ContactsFilterSpecifications<ContactsEntity>().getSpecifications(search, statusId, courseId);
+        Specification<ContactArchiveEntity> contactArchiveSpecs = new ContactsFilterSpecifications<ContactArchiveEntity>().getSpecifications(search, statusId, courseId);
         if (statusName != null && statusName.equalsIgnoreCase("Archive")) {
-            List<AbstractContacts> foundContacts = findContactsAndStudents(pageable, search, statusId, courseId, contactArchiveRepository, IS_ARCHIVE_STUDENT_REPOSITORY, pageSize);
-            return new ContactSearchDto(foundContacts, page, pageSize, foundContacts.size());
+            FoundContactsDto foundContactsDto = findContactsAndStudents(contactArchiveRepository, IS_ARCHIVE_STUDENT_REPOSITORY, contactArchiveSpecs, pageable, search, statusId, courseId, null);
+            return new ContactSearchDto(foundContactsDto.getFoundContacts(), page, pageSize, foundContactsDto.getElementsCount());
         } else if (statusName != null && statusName.equalsIgnoreCase("Student")) {
-            List<AbstractStudentDto> foundStudents = studentFeignClient.findStudents(new FindStudentsDto(pageable, search, statusId, null, courseId, true));
-            if (foundStudents.size() < pageSize) {
-                List<AbstractStudentDto> foundStudentArchive = studentFeignClient.findStudentsForContacts(new FindStudentsForContactsDto(pageSize - foundStudents.size(), search, statusId, null, courseId, false));
-                if (!foundStudentArchive.isEmpty())
-                    foundStudents.addAll(foundStudentArchive);
-            }
-            List<? extends AbstractContacts> contactFromStudents = foundStudents.stream().map(ContactsEntity::new).collect(Collectors.toList());
-            return new ContactSearchDto(contactFromStudents, page, pageSize, contactFromStudents.size());
+            return studentFeignClient.getAll();
         } else {
-            List<AbstractContacts> foundContacts = findContactsAndStudents(pageable, search, statusId, courseId, contactRepository, IS_CURRENT_STUDENT_REPOSITORY, pageSize);
-            if (foundContacts.size() < pageSize) {
-                List<AbstractContacts> foundContactsArchive = findContacts(PageRequest.of(page, pageSize - foundContacts.size()), search, statusId, courseId, contactArchiveRepository);
-                if (!foundContactsArchive.isEmpty()) {
-                    foundContacts.addAll(foundContactsArchive);
-                }
-            }
-            int size = foundContacts.size();
-            if (size < pageSize)
-                addStudents(search, statusId, courseId, IS_ARCHIVE_STUDENT_REPOSITORY, pageSize - size);
+            FoundContactsDto foundContactsDto = findContactsAndStudents(contactRepository, IS_CURRENT_STUDENT_REPOSITORY, contactSpecs, pageable, search, statusId, courseId, null);
+            foundContacts = foundContactsDto.getFoundContacts();
+            int totalElements = (int) foundContactsDto.getElementsCount();
+            int studentElementsSize = (page + 1) * pageSize - totalElements;
+            int offset = page != 0 ? studentElementsSize - pageSize : 0;
+            FoundContactsDto foundArchiveContactsDto = findContactsAndStudents(contactArchiveRepository, IS_ARCHIVE_STUDENT_REPOSITORY, contactArchiveSpecs, PageRequest.of(0, studentElementsSize), search, statusId, courseId, offset);
+            foundContacts.add(foundArchiveContactsDto.getFoundContacts());
             return new ContactSearchDto(foundContacts, page, pageSize, foundContacts.size());
         }
     }
+
+    private <C extends AbstractContacts, CR extends IContactRepository<C>> FoundContactsDto findContactsAndStudents(CR repository, boolean isArchiveStudentRepository, Specification<C> specs, Pageable pageable, String search, Integer statusId, UUID courseId, Integer offset) {
+        Page<C> foundContactsPaged = repository.findAll(specs, pageable);
+        List<Object> foundContacts = new ArrayList<>(foundContactsPaged.getContent());
+        if(offset != null)
+            foundContacts = foundContacts.subList(offset, foundContacts.size());
+        addStudents(pageable.getPageNumber(), pageable.getPageSize(), search, statusId, courseId, foundContacts, (int) foundContactsPaged.getTotalElements(), isArchiveStudentRepository);
+        return new FoundContactsDto(foundContacts, foundContactsPaged.getTotalElements());
+    }
+
+    private void addStudents(int page, int pageSize, String search, Integer statusId, UUID courseId, List<Object> foundContacts, int totalElements, boolean isArchiveStudentRepository) {
+        if (foundContacts.size() < pageSize) {
+            int studentElementsSize = (page + 1) * pageSize - totalElements;
+            Pageable additionalPageable = PageRequest.of(0, studentElementsSize);
+            int offset = page != 0 ? studentElementsSize - pageSize : 0;
+            foundContacts.addAll(addStudentsRequest(search, statusId, courseId, isArchiveStudentRepository, additionalPageable, offset));
+        }
+    }
+
 
     public AbstractContacts getById(UUID id) {
         return contactRepository.getByContactId(id).or(() -> contactArchiveRepository.findById(id)).orElseThrow(() -> new ContactNotFoundException(id.toString()));
@@ -243,7 +258,7 @@ public class ContactsService {
                 throw new PromoteUnsuccesfull(e.getMessage());
             }
             rabbitProducer.sendAddLog(id, "Contact " + contact.getContactName() + " promoted to student");
-        }else{
+        } else {
             throw new StudentAlreadyExistsException(id.toString());
         }
     }
@@ -271,28 +286,35 @@ public class ContactsService {
         }));
     }
 
+    //    @Loggable
+//    public static <C extends AbstractContacts, E extends IContactRepository<C>> List<Object> findContacts(Pageable pageable, String search, Integer statusId, UUID courseId, E repository) {
+//        Specification<C> contactSpecs = new ContactsFilterSpecifications<C>().getSpecifications(search, statusId, courseId);
+//        return new ArrayList<>(repository.findAll(contactSpecs, pageable).getContent());
+//    }
+
+//    @Loggable
+//    public static <C extends AbstractContacts, E extends IContactRepository<C>> Page<C> findContacts(Pageable pageable, String search, Integer statusId, UUID courseId, E repository) {
+//        Specification<C> contactSpecs = new ContactsFilterSpecifications<C>().getSpecifications(search, statusId, courseId);
+//        return repository.findAll(contactSpecs, pageable);
+//    }
+
+    //    @Loggable
+//    private <C extends AbstractContacts, CR extends IContactRepository<C>> FoundContactsDto findContactsAndStudents(Pageable pageable, String search, Integer statusId, UUID courseId, CR contactsRepository, boolean isCurrentStudentRepository, int pageSize, int page) {
+//        Page<C> foundContactsPaged = findContacts(pageable, search, statusId, courseId, contactsRepository);
+//        List<Object> foundContacts = new ArrayList<>(foundContactsPaged.getContent());
+//        int size = foundContacts.size();
+//        if (size < pageSize) {
+//            int studentElementsSize = (page + 1) * pageSize - (int) foundContactsPaged.getTotalElements();
+//            Pageable additionalPageable = PageRequest.of(0, studentElementsSize);
+//            int offset = page != 0 ? studentElementsSize - pageSize : 0;
+//            foundContacts.addAll(addStudents(search, statusId, courseId, isCurrentStudentRepository, additionalPageable, offset));
+//        }
+//        return new FoundContactsDto(foundContacts, foundContactsPaged.getTotalElements());
+//    }
 
     @Loggable
-    public static <C extends AbstractContacts, E extends IContactRepository<C>> List<AbstractContacts> findContacts(Pageable pageable, String search, Integer statusId, UUID courseId, E repository) {
-        Specification<C> contactSpecs = new ContactsFilterSpecifications<C>().getSpecifications(search, statusId, courseId);
-        return new ArrayList<>(repository.findAll(contactSpecs, pageable).getContent());
-    }
-
-    @Loggable
-    private <C extends AbstractContacts, CR extends IContactRepository<C>> List<AbstractContacts> findContactsAndStudents(Pageable pageable, String search, Integer statusId, UUID courseId, CR contactsRepository, boolean isCurrentStudentRepository, int pageSize) {
-        List<AbstractContacts> foundContact = findContacts(pageable, search, statusId, courseId, contactsRepository);
-        int size = foundContact.size();
-        if (size < pageSize)
-            foundContact.addAll(addStudents(search, statusId, courseId, isCurrentStudentRepository, size));
-        return foundContact;
-    }
-
-    @Loggable
-    private List<? extends AbstractContacts> addStudents(String search, Integer statusId, UUID courseId, boolean isCurrentStudentRepository, int size) {
-        List<AbstractStudentDto> foundStudents = studentFeignClient.findStudentsForContacts(new FindStudentsForContactsDto(size, search, statusId, null, courseId, isCurrentStudentRepository));
-        if (!foundStudents.isEmpty())
-            return foundStudents.stream().map(ContactsEntity::new).toList();
-        return new ArrayList<>();
+    private List<Object> addStudentsRequest(String search, Integer statusId, UUID courseId, boolean isCurrentStudentRepository, Pageable pageable, int offset) {
+        return new ArrayList<>(studentFeignClient.findStudentsForContacts(new FindStudentsForContactsDto(search, statusId, courseId, isCurrentStudentRepository, pageable, offset)));
     }
 
     @Loggable

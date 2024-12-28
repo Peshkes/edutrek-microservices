@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @RestController
@@ -43,7 +44,7 @@ public class GroupController {
 
     @PostMapping("/students")
     @ResponseStatus(HttpStatus.OK)
-    public List<GetStudentsByGroupDto> getStudentsByGroup(@RequestBody Set<java.util.UUID> ids) {
+    public Map<java.util.UUID, List<GetStudentsByGroupDto>> getStudentsByGroup(@RequestBody Set<java.util.UUID> ids) {
         return groupService.getStudentsByGroup(ids);
     }
 
@@ -66,6 +67,12 @@ public class GroupController {
         return new ResponseEntity<>("Group deleted", HttpStatus.OK);
     }
 
+    @DeleteMapping("/student/{id}")
+    public ResponseEntity<String> deleteByStudentId(@PathVariable @UUID String id) {
+        groupService.deleteByStudentId(java.util.UUID.fromString(id));
+        return new ResponseEntity<>("Students deleted from groups", HttpStatus.OK);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<String> updateGroupById(@PathVariable @UUID String id, @RequestBody @Valid AddGroupDto groupData) {
         groupService.updateById(java.util.UUID.fromString(id), groupData);
@@ -84,22 +91,16 @@ public class GroupController {
         return new ResponseEntity<>("Group created", HttpStatus.CREATED);
     }
 
-    @PutMapping("/archive/students/{id}")
+    @PutMapping("/deactivate/students/{id}")
     public ResponseEntity<String> archiveStudents(@PathVariable @UUID String id, @RequestBody @Valid List<java.util.UUID> students) {
-        groupService.archiveStudents(java.util.UUID.fromString(id), students);
+        groupService.deactivateStudentsByGroup(java.util.UUID.fromString(id), students);
         return new ResponseEntity<>("Students archived", HttpStatus.OK);
     }
 
     @PutMapping("/archive/student/{id}")
-    public ResponseEntity<String> archiveStudent(@PathVariable @UUID String id) {
-        groupService.archiveStudentsByStudentId(java.util.UUID.fromString(id));
+    public ResponseEntity<String> archiveStudentByStudentId(@PathVariable @UUID String id) {
+        groupService.archiveStudent(java.util.UUID.fromString(id));
         return new ResponseEntity<>("Students archived", HttpStatus.OK);
-    }
-
-    @DeleteMapping("/student/{id}")
-    public ResponseEntity<String> deleteByStudentId(@PathVariable @UUID String id) {
-        groupService.deleteByStudentId(java.util.UUID.fromString(id));
-        return new ResponseEntity<>("Students deleted from groups", HttpStatus.OK);
     }
 
     @PutMapping("/lecturers/{id}")

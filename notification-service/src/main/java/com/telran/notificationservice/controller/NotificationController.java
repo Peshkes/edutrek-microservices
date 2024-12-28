@@ -45,11 +45,11 @@ public class NotificationController {
         return service.getEntityTypes();
     }
 
-    @PostMapping("/{entityType}/{id}")
+    @PostMapping("/{entityType}/{entityId}/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<String> addNotificationToEntity(@PathVariable UUID id,@PathVariable EntityTypes entityType, @RequestBody @Valid NotificationDto notificationDto) {
-       service.addNotificationToId(id, notificationDto, entityType);
-       return new ResponseEntity<>("Notification for " + entityType + ": " + id + " created", HttpStatus.CREATED);
+    public ResponseEntity<String> addNotificationToEntity(@PathVariable UUID entityId,@PathVariable EntityTypes entityType, @RequestBody @Valid NotificationDto notificationDto) {
+       service.addNotificationToId(entityId, notificationDto, entityType);
+       return new ResponseEntity<>("Notification for " + entityType + ": " + entityId + " created", HttpStatus.CREATED);
     }
 
     @DeleteMapping("/{entityType}")
@@ -58,7 +58,7 @@ public class NotificationController {
         return new ResponseEntity<>("Notification deleted", HttpStatus.OK);
     }
 
-    @PutMapping("/{entityType}/{id}")
+    @PutMapping("/{entityType}/{id}}")
     public ResponseEntity<String> updateById(@PathVariable UUID id,@PathVariable EntityTypes entityType, @RequestBody @Valid NotificationDataDto notificationDataDto) {
         service.updateById(id, notificationDataDto, entityType);
         return new ResponseEntity<>("Contact updated", HttpStatus.OK);
