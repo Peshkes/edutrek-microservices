@@ -10,6 +10,5 @@ public interface LecturersByGroupArchiveRepository extends ILecturerByGroupRepos
     @Modifying
     void deleteByGroupId(@Param("id") UUID groupId);
     List<LecturersByGroupArchiveEntity> getByGroupId(@Param("id") UUID uuid);
-    @Modifying
-    void deleteByLecturerId(UUID lecturerId);
+    List<LecturersByGroupArchiveEntity> deleteByLecturerId(UUID lecturerId);
 }

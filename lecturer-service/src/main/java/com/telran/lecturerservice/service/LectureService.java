@@ -8,6 +8,7 @@ import com.telran.lecturerservice.error.BranchNotFoundException;
 import com.telran.lecturerservice.error.DatabaseException.DatabaseAddingException;
 import com.telran.lecturerservice.error.DatabaseException.DatabaseDeletingException;
 import com.telran.lecturerservice.error.Exception;
+import com.telran.lecturerservice.error.LecturerNotFoundException;
 import com.telran.lecturerservice.feign.GroupClient;
 import com.telran.lecturerservice.logging.Loggable;
 import com.telran.lecturerservice.persistence.*;
@@ -81,11 +82,8 @@ public class LectureService {
             if (lecturer != null) {
                 deleteLecturer(id, groupClient::deleteCurrentLecturersByLecturerId, repository::deleteById);
             } else {
-                lecturer = archiveRepository.findById(id).orElse(null);
-                if (lecturer != null)
-                    deleteLecturer(id, groupClient::deleteArchiveLecturersByLecturerId, archiveRepository::deleteById);
-                else
-                    throw new Exception(id.toString());
+                lecturer = archiveRepository.findById(id).orElseThrow(() -> new LecturerNotFoundException(id.toString()));
+                deleteLecturer(id, groupClient::deleteArchiveLecturersByLecturerId, archiveRepository::deleteById);
             }
             rabbitProducer.deleteLog(id);
             return lecturer;
@@ -153,11 +151,18 @@ public class LectureService {
     @Loggable
     @Transactional
     public void archiveById(UUID uuid, String reason) {
-        BaseLecturer lecturer = deleteById(uuid);
+        LecturerEntity lecturer = repository.findById(uuid).orElseThrow(() -> new LecturerNotFoundException(uuid.toString()));
+        try {
+            repository.delete(lecturer);
+            groupClient.archiveLecturersByLecturerId(uuid);
+        } catch (Exception e) {
+            throw new DatabaseDeletingException(e.getMessage());
+        }
+
         try {
             archiveRepository.save(new LecturerArchiveEntity(lecturer, reason));
             addLog(uuid, "Lecturer archived. Reason: " + reason);
-        } catch (java.lang.Exception e) {
+        } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
         }
     }

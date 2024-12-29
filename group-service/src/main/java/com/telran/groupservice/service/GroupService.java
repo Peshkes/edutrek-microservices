@@ -110,22 +110,6 @@ public class GroupService {
         }
     }
 
-    //    @Bean
-//    public RequestInterceptor customHeaderInterceptor() {
-//        return (RequestTemplate template) -> {
-//            ServletRequestAttributes attributes =
-//                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-//
-//            if (attributes != null) {
-//                String customId = attributes.getRequest().getHeader("X-Request-ID");
-//                if (customId != null) {
-//                    template.header("X-Request-Id", customId);
-//                }
-//            }
-//        };
-//    }
-
-
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
@@ -205,7 +189,6 @@ public class GroupService {
 
         if (groupData.getGroupName() != null) groupEntity.setGroupName(groupData.getGroupName());
         if (groupData.getFinishDate() != null) groupEntity.setFinishDate(groupData.getFinishDate());
-        if (groupData.getIsActive() != null) groupEntity.setIsActive(groupData.getIsActive());
         if (groupData.getCourseId() != null && !rabbitProducer.sendCourseExists(groupData.getCourseId()))
             groupEntity.setCourseId(groupData.getCourseId());
         if (groupData.getSlackLink() != null) groupEntity.setSlackLink(groupData.getSlackLink());
@@ -323,9 +306,7 @@ public class GroupService {
     @Transactional
     public void graduateById(UUID uuid) {
         GroupEntity groupEntity = repository.findById(uuid).orElseThrow(() -> new GroupNotFoundException(String.valueOf(uuid)));
-        groupEntity.setIsActive(false);
         try {
-            groupEntity.setIsActive(false);
             for (StudentsByGroupEntity student : studentsByGroupRepository.getByGroupId(uuid)) {
                 student.setIsActive(false);
                 studentsByGroupArchiveRepository.save(new StudentsByGroupArchiveEntity(student));
@@ -358,13 +339,11 @@ public class GroupService {
         }
     }
 
-
     private GroupEntity constructEntity(AddGroupDto group) {
         return new GroupEntity(
                 group.getGroupName(),
                 group.getStartDate(),
                 group.getFinishDate(),
-                group.getIsActive(),
                 group.getCourseId(),
                 group.getSlackLink(),
                 group.getWhatsAppLink(),

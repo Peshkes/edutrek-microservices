@@ -12,8 +12,8 @@ import java.util.UUID;
 @NoArgsConstructor
 public class GroupEntity extends BaseGroup {
 
-    public GroupEntity(String groupName, LocalDate startDate, LocalDate finishDate, Boolean isActive, UUID courseId, String slackLink, String whatsAppLink, String skypeLink, Boolean deactivateAfter) {
-        super(groupName, startDate, finishDate, isActive, courseId, slackLink, whatsAppLink, skypeLink, deactivateAfter);
+    public GroupEntity(String groupName, LocalDate startDate, LocalDate finishDate, UUID courseId, String slackLink, String whatsAppLink, String skypeLink, Boolean deactivateAfter) {
+        super(groupName, startDate, finishDate, courseId, slackLink, whatsAppLink, skypeLink, deactivateAfter);
     }
 
     public GroupEntity(BaseGroup groupEntity) {

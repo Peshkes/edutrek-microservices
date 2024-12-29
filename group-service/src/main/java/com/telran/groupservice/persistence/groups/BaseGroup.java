@@ -26,9 +26,6 @@ public abstract class BaseGroup {
     @Column(name = "finish_date")
     private LocalDate finishDate;
     @Setter
-    @Column(name = "is_active")
-    private Boolean isActive;
-    @Setter
     @Column(name = "course_id")
     private UUID courseId;
     @Setter
@@ -44,12 +41,11 @@ public abstract class BaseGroup {
     @Column(name = "deactivate_after")
     private Boolean deactivateAfter;
 
-    public BaseGroup(String groupName, LocalDate startDate, LocalDate finishDate, Boolean isActive, UUID courseId, String slackLink, String whatsAppLink, String skypeLink, Boolean deactivateAfter) {
+    public BaseGroup(String groupName, LocalDate startDate, LocalDate finishDate, UUID courseId, String slackLink, String whatsAppLink, String skypeLink, Boolean deactivateAfter) {
         this.groupId = UUID.randomUUID();
         this.groupName = groupName;
         this.startDate = startDate;
         this.finishDate = finishDate;
-        this.isActive = isActive;
         this.courseId = courseId;
         this.slackLink = slackLink;
         this.whatsAppLink = whatsAppLink;
@@ -62,7 +58,6 @@ public abstract class BaseGroup {
         this.groupName = baseGroup.getGroupName();
         this.startDate = baseGroup.getStartDate();
         this.finishDate = baseGroup.getFinishDate();
-        this.isActive = baseGroup.getIsActive();
         this.courseId = baseGroup.getCourseId();
         this.slackLink = baseGroup.getSlackLink();
         this.whatsAppLink = baseGroup.getWhatsAppLink();

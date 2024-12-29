@@ -19,6 +19,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 //import org.springframework.security.web.csrf.CsrfTokenRepository;
 //import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -50,7 +53,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/auth/{id}").hasRole(PRINCIPAL.toString())
                         .requestMatchers(HttpMethod.PUT, "/auth/login/{id}", "/auth/password/{id}").access(ownerAuthorizationManager)
                         .requestMatchers(HttpMethod.GET, "/auth/ping").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/auth/subscribe/{clientId}").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/branches", "/branches/{id}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/branches").hasRole(PRINCIPAL.toString())
@@ -109,12 +111,12 @@ public class SecurityConfig {
                         .anyRequest().denyAll()
         );
 
-//        http.csrf(csrf -> {
-//            csrf.ignoringRequestMatchers(new AntPathRequestMatcher("/auth/subscribe/**"));
-//            csrf.csrfTokenRepository(csrfTokenRepository());
-//        });
+        http.csrf(csrf -> {
+            csrf.ignoringRequestMatchers(new AntPathRequestMatcher("/auth/subscribe/**"));
+            csrf.csrfTokenRepository(csrfTokenRepository());
+        });
 //        http.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        http.csrf(AbstractHttpConfigurer::disable);
+//        http.csrf(AbstractHttpConfigurer::disable);
         http.cors(cors -> corsConfigurationSource());
         http.addFilterBefore(expiredPasswordFilter, BasicAuthenticationFilter.class);
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
@@ -135,12 +137,12 @@ public class SecurityConfig {
         return source;
     }
 
-//    @Bean
-//    public CsrfTokenRepository csrfTokenRepository() {
-//        HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
-//        repository.setHeaderName("X-CSRF-TOKEN");
-//        return repository;
-//    }
+    @Bean
+    public CsrfTokenRepository csrfTokenRepository() {
+        HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
+        repository.setHeaderName("X-CSRF-TOKEN");
+        return repository;
+    }
 
     @Bean
     public DaoAuthenticationProvider daoAuthenticationProvider() {

@@ -24,9 +24,6 @@ public class AddGroupDto {
     @NotNull(message = "Finish date cannot be null")
     private LocalDate finishDate;
 
-    @NotNull(message = "Activity status cannot be null")
-    private Boolean isActive;
-
     @NotNull(message = "Course ID cannot be null")
     private UUID courseId;
 
