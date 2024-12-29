@@ -35,11 +35,11 @@ public abstract class AbstractStudent {
     @Column(name = "comment")
     private String comment;
     @Column(name = "full_payment")
-    private int fullPayment;
+    private double fullPayment;
     @Column(name = "documents_done")
     private boolean documentsDone;
 
-    public AbstractStudent(String contactName, String phone, String email, int statusId, int branchId, UUID targetCourseId, String comment, int fullPayment, boolean documentsDone) {
+    public AbstractStudent(String contactName, String phone, String email, int statusId, int branchId, UUID targetCourseId, String comment, double fullPayment, boolean documentsDone) {
         this.studentId = UUID.randomUUID();
         this.contactName = contactName;
         this.phone = phone;

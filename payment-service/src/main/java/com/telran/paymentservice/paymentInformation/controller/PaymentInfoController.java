@@ -41,7 +41,7 @@ public class PaymentInfoController {
 
     @PostMapping("/studentids")
     @ResponseStatus(HttpStatus.OK)
-    public Map<UUID, Integer> findAllByStudentId(@RequestBody Set<UUID> studentIds) {
+    public Map<UUID, Double> findAllByStudentId(@RequestBody Set<UUID> studentIds) {
         return paymentInfoService.getAllByStudentId(studentIds);
     }
 

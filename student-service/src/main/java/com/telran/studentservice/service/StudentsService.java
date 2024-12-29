@@ -39,8 +39,6 @@ import static com.telran.studentservice.persistence.StudentsFilterSpecifications
 @RequiredArgsConstructor
 
 public class StudentsService {
-
-    private static final boolean IS_CURRENT_REPOSITORY = true;
     private final StudentsRepository repository;
     private final StudentsArchiveRepository archiveRepository;
     private final StudentRabbitProducer rabbitProducer;
@@ -91,7 +89,8 @@ public class StudentsService {
                 List<AbstractStudent> foundArchiveStudents = getAllFilteredArchiveStudents.getFoundStudents();
                 int archiveSize = foundArchiveStudents.size();
                 if (archiveSize >= offset)
-                    getAllFilteredStudents.getFoundStudents().addAll(foundArchiveStudents.subList(offset, archiveSize));            }
+                    getAllFilteredStudents.getFoundStudents().addAll(foundArchiveStudents.subList(offset, archiveSize));
+            }
         }
         return new StudentSearchDto(addGroupsAndPaymentAmountToFoundStudents(getAllFilteredStudents.getFoundStudents()), page, pageSize, getAllFilteredStudents.getElementsCount());
     }
@@ -99,7 +98,7 @@ public class StudentsService {
     private List<StudentWithGroupDto> addGroupsAndPaymentAmountToFoundStudents(List<? extends AbstractStudent> foundStudents) {
         Set<UUID> keysToRequest = foundStudents.stream().map(AbstractStudent::getStudentId).collect(Collectors.toSet());
         Map<UUID, List<GetStudentsByGroupDto>> studentsByGroup = groupFeignClient.getStudentsByGroup(keysToRequest);
-        Map<UUID, Integer> studentPaymentInfo = paymentsFeignClient.getStudentsByGroup(keysToRequest);
+        Map<UUID, Double> studentPaymentInfo = paymentsFeignClient.getStudentsByGroup(keysToRequest);
         return foundStudents.stream().map(s -> {
             UUID id = s.getStudentId();
             StudentWithGroupDto student = new StudentWithGroupDto(s);
@@ -239,7 +238,7 @@ public class StudentsService {
             updates.add("course");
         }
 
-        int fullPayment = studentData.getFullPayment();
+        double fullPayment = studentData.getFullPayment();
         if (entity.getFullPayment() != fullPayment) {
             entity.setFullPayment(fullPayment);
             updates.add("payment amount");
@@ -396,7 +395,7 @@ public class StudentsService {
     @SuppressWarnings("unchecked")
     public <S extends AbstractStudent> List<StudentWithGroupDto> findStudentForContacts(String search, Integer statusId, UUID courseId, boolean isCurrentRepository, Pageable pageable, int offset) {
         Specification<S> studentSpecs = getStudentSpecifications(search, statusId, courseId);
-        List<? extends AbstractStudent> pageContactEntity = isCurrentRepository ? repository.findAll((Specification<StudentEntity>) studentSpecs,pageable).getContent() : archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs, pageable).getContent();
+        List<? extends AbstractStudent> pageContactEntity = isCurrentRepository ? repository.findAll((Specification<StudentEntity>) studentSpecs, pageable).getContent() : archiveRepository.findAll((Specification<StudentsArchiveEntity>) studentSpecs, pageable).getContent();
         List<StudentWithGroupDto> studentWithGroup = addGroupsAndPaymentAmountToFoundStudents(pageContactEntity);
         int size = studentWithGroup.size();
         if (size >= offset)
