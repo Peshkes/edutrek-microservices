@@ -17,7 +17,7 @@ import java.util.UUID;
 @Table(schema = "current", name = "payment_information")
 public class PaymentInfoEntity extends AbstractPaymentInformation {
 
-    public PaymentInfoEntity( UUID studentNum, int paymentTypeId, int paymentUmount, String paymentDetails) {
+    public PaymentInfoEntity( UUID studentNum, int paymentTypeId, double paymentUmount, String paymentDetails) {
         super( studentNum, paymentTypeId, paymentUmount, paymentDetails);
     }
 

@@ -21,10 +21,10 @@ public class StudentWithGroupDto {
     private int branchId;
     private UUID targetCourseId;
     private String comment;
-    private int fullPayment;
+    private double fullPayment;
     private boolean documentsDone;
     private List<GroupsDto> groups;
-    private int amountAlreadyPayed;
+    private double amountAlreadyPayed;
 
     public StudentWithGroupDto(AbstractStudent abstractStudent) {
         this.studentId = abstractStudent.getStudentId();

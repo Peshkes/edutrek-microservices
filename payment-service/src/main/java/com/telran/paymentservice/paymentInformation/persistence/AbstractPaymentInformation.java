@@ -31,12 +31,12 @@ public class AbstractPaymentInformation {
     private int paymentTypeId;
 
     @Column(name = "payment_amount")
-    private int paymentAmount;
+    private double paymentAmount;
 
     @Column(name = "payment_details")
     private String paymentDetails;
 
-    public AbstractPaymentInformation(UUID studentNum, int paymentTypeId, int paymentAmount, String paymentDetails) {
+    public AbstractPaymentInformation(UUID studentNum, int paymentTypeId, double paymentAmount, String paymentDetails) {
         this.paymentId = UUID.randomUUID();
         this.studentId = studentNum;
         this.paymentDate = LocalDate.now();

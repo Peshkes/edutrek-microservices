@@ -31,7 +31,7 @@ public class StudentsPromoteDataDto {
     private UUID targetCourseId;
     @Size(max = 256, message = "Name must be between 2 and 256 characters")
     private String comment;
-    private int fullPayment;
+    private double fullPayment;
     private boolean documentsDone;
     private String logText = null;
 

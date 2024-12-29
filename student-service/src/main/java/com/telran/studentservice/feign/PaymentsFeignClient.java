@@ -22,6 +22,6 @@ public interface PaymentsFeignClient {
     void moveToArchiveById(@PathVariable UUID id);
 
     @RequestMapping(method = RequestMethod.POST, value = "/payments/studentids")
-    Map<UUID, Integer> getStudentsByGroup(@RequestBody Set<UUID> id);
+    Map<UUID, Double> getStudentsByGroup(@RequestBody Set<UUID> id);
 
 }
