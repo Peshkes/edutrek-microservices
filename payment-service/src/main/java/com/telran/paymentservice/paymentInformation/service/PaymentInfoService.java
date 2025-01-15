@@ -28,6 +28,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -50,30 +51,23 @@ public class PaymentInfoService {
     @SuppressWarnings("unchecked")
     public PaymentsInfoSearchDto getByStudentId(int page, int pageSize, UUID studentId, boolean isCurrent) {
         Pageable pageable = PageRequest.of(page, pageSize);
-//        Specification<PaymentInfoEntity> specs = getPaymentsSpecifications(studentId);
         Page<? extends AbstractPaymentInformation> pageFoundPayments = isCurrent ? repository.findByStudentId(studentId, pageable) : archiveRepository.findByStudentId(studentId, pageable);
         List<AbstractPaymentInformation> foundPayments = (List<AbstractPaymentInformation>) pageFoundPayments.getContent();
-//        if (foundPayments.size() < pageSize) {
-//            Specification<PaymentInfoArchiveEntity> archiveSpecs = getPaymentsSpecifications(studentId);
-//            Page<? extends AbstractPaymentInformation> pageFoundArchivePayments = archiveRepository.findAll(archiveSpecs, PageRequest.of(page, pageSize - foundPayments.size()));
-//            List<AbstractPaymentInformation> foundArchivePayments = (List<AbstractPaymentInformation>) pageFoundArchivePayments.getContent();
-//            if (!foundArchivePayments.isEmpty())
-//                foundPayments.addAll(foundArchivePayments);
-//        }
         return new PaymentsInfoSearchDto(foundPayments, page, pageSize, foundPayments.size());
     }
 
     @Transactional
-    public Map<UUID, Integer> getAllByStudentId(Set<UUID> studentIds) {
+    public Map<UUID, BigDecimal> getAllByStudentId(Set<UUID> studentIds) {
         List<PaymentInfoReturnDto> foundPayments = repository.findAllByStudentId(studentIds);
-        return foundPayments.stream().collect(Collectors.groupingBy(PaymentInfoReturnDto::getStudentId, Collectors.summingInt(PaymentInfoReturnDto::getPaymentAmount)));
-
+        return foundPayments.stream().collect(Collectors.groupingBy(PaymentInfoReturnDto::getStudentId, Collectors.reducing(BigDecimal.ZERO, PaymentInfoReturnDto::getPaymentAmount, BigDecimal::add)
+        ));
     }
+
 
     @Loggable
     @Transactional
     @Caching(evict = {
-            @CacheEvict(key = "#id"),
+            @CacheEvict(key = "#studentId"),
             @CacheEvict(key = "{'getAll'}")
     })
     public void deleteByStudentId(UUID studentId) {
@@ -91,7 +85,7 @@ public class PaymentInfoService {
             repository.save(new PaymentInfoEntity(
                     paymentInfoDtoData.getStudentId(),
                     paymentInfoDtoData.getPaymentTypeId(),
-                    paymentInfoDtoData.getPaymentUmount(),
+                    paymentInfoDtoData.getPaymentAmount(),
                     paymentInfoDtoData.getPaymentDetails()));
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
@@ -130,7 +124,7 @@ public class PaymentInfoService {
         entity.setStudentId(paymentInfoDataDto.getStudentId());
         entity.setPaymentDate(paymentInfoDataDto.getPaymentDate());
         entity.setPaymentTypeId(paymentInfoDataDto.getPaymentTypeId());
-        entity.setPaymentAmount(paymentInfoDataDto.getPaymentUmount());
+        entity.setPaymentAmount(paymentInfoDataDto.getPaymentAmount());
         entity.setPaymentDetails(paymentInfoDataDto.getPaymentDetails());
     }
 
@@ -138,7 +132,7 @@ public class PaymentInfoService {
     @Loggable
     @Transactional
     @Caching(evict = {
-            @CacheEvict(key = "#id"),
+            @CacheEvict(key = "#studentId"),
             @CacheEvict(key = "{'getAll'}")
     })
     public void movePaymentsToArchive(UUID studentId) {

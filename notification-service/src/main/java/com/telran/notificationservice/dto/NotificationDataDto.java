@@ -18,11 +18,11 @@ public class NotificationDataDto {
     private String notificationText;
 
 
-    public NotificationDataDto(int notificationId, NotificationDto notificationDto) {
+    public NotificationDataDto(int notificationId, NotificationDto notificationDto, UUID recipientId, String entityName) {
         this.notificationId = notificationId;
-        this.recipientId = notificationDto.getRecipientId();
+        this.recipientId = recipientId;
         this.scheduledTime = notificationDto.getScheduledTime();
-        this.entityName = notificationDto.getNotificationText();
+        this.entityName = entityName;
         this.notificationText = notificationDto.getNotificationText();
     }
 }

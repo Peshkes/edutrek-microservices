@@ -1,8 +1,8 @@
 package com.telran.notificationservice.controller;
 
 import com.telran.notificationservice.dto.DeleteNotificationDto;
-import com.telran.notificationservice.dto.NotificationDataDto;
 import com.telran.notificationservice.dto.NotificationDto;
+import com.telran.notificationservice.dto.NotificationUpdateDataDto;
 import com.telran.notificationservice.persistence.AbstractNotificationDocument;
 import com.telran.notificationservice.persistence.EntityTypes;
 import com.telran.notificationservice.service.NotificationService;
@@ -47,21 +47,21 @@ public class NotificationController {
 
     @PostMapping("/{entityType}/{entityId}/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<String> addNotificationToEntity(@PathVariable UUID entityId,@PathVariable EntityTypes entityType, @RequestBody @Valid NotificationDto notificationDto) {
-       service.addNotificationToId(entityId, notificationDto, entityType);
+    public ResponseEntity<String> addNotificationToEntity(@PathVariable EntityTypes entityType, @PathVariable UUID entityId, @RequestBody @Valid NotificationDto notificationDto,@PathVariable UUID id ) {
+       service.addNotificationToId(entityId, notificationDto, entityType, id);
        return new ResponseEntity<>("Notification for " + entityType + ": " + entityId + " created", HttpStatus.CREATED);
     }
 
     @DeleteMapping("/{entityType}")
-    public ResponseEntity<String> deleteById( @RequestBody @Valid DeleteNotificationDto deleteNotificationDto, @PathVariable EntityTypes entityType) {
+    public ResponseEntity<String> deleteById(@PathVariable EntityTypes entityType, @RequestBody @Valid DeleteNotificationDto deleteNotificationDto ) {
         service.deleteNotificationById(deleteNotificationDto.getEntityId(), deleteNotificationDto.getNotificationId(), entityType);
         return new ResponseEntity<>("Notification deleted", HttpStatus.OK);
     }
 
-    @PutMapping("/{entityType}/{id}}")
-    public ResponseEntity<String> updateById(@PathVariable UUID id,@PathVariable EntityTypes entityType, @RequestBody @Valid NotificationDataDto notificationDataDto) {
-        service.updateById(id, notificationDataDto, entityType);
-        return new ResponseEntity<>("Contact updated", HttpStatus.OK);
+    @PutMapping("/{entityType}/{entityId}")
+    public ResponseEntity<String> updateById(@PathVariable EntityTypes entityType, @PathVariable UUID entityId, @RequestBody @Valid NotificationUpdateDataDto notificationDataDto) {
+        service.updateById(entityId, notificationDataDto, entityType);
+        return new ResponseEntity<>("Notification updated", HttpStatus.OK);
     }
 
     @GetMapping("/subscribe/{clientId}")

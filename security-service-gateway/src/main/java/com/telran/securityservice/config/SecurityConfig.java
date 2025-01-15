@@ -12,21 +12,19 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-//import org.springframework.security.web.csrf.CsrfTokenRepository;
-//import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRepository;
-import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static com.telran.securityservice.dto.Roles.PRINCIPAL;
 
@@ -39,12 +37,17 @@ public class SecurityConfig {
     private final OwnerAuthorizationManager ownerAuthorizationManager;
     private final UserConfig userConfig;
     private final ExpiredPasswordFilter expiredPasswordFilter;
+    private final CsrfLoggingFilter csrfLoggingFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+
+
         http.authorizeHttpRequests((authorizeHttpRequests) ->
                 authorizeHttpRequests
-                        .requestMatchers(HttpMethod.GET, "/auth/csrf").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/csrf").permitAll()
+
                         .requestMatchers(HttpMethod.GET, "/auth").hasRole(PRINCIPAL.toString())
                         .requestMatchers(HttpMethod.GET, "/auth/id/{id}", "/auth/login/{login}").access(ownerOrPrincipalAuthorizationManager)
                         .requestMatchers(HttpMethod.POST, "/auth/account", "/auth/rollback").hasRole(PRINCIPAL.toString())
@@ -85,7 +88,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/logs/{id}").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/notifications/{entityType}/{id}", "/notifications/entityTypes", "/notifications/subscribe/{clientId}").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/notifications/{entityType}/{id}").access(ownerAuthorizationManager)
+                        .requestMatchers(HttpMethod.POST, "/notifications/{entityType}/{entityId}/{id}").access(ownerAuthorizationManager)
                         .requestMatchers(HttpMethod.DELETE, "/notifications/{entityType}", "/notifications").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/notifications/{entityType}/{id}").authenticated()
 
@@ -104,45 +107,76 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/students", "/students/{id}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/students").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/students/{id}").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/students", "/students/archive/{id}/{reason}", "/students/graduate/{id}").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/students/{id}", "/students/archive/{id}/{reason}", "/students/graduate/{id}").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/weekdays", "/weekdays/{id}").authenticated()
 
                         .anyRequest().denyAll()
         );
 
-        http.csrf(csrf -> {
-            csrf.ignoringRequestMatchers(new AntPathRequestMatcher("/auth/subscribe/**"));
-            csrf.csrfTokenRepository(csrfTokenRepository());
-        });
-//        http.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//        http.csrf(AbstractHttpConfigurer::disable);
+//        http.csrf(csrf -> {
+//            csrf.ignoringRequestMatchers(new AntPathRequestMatcher("/auth/subscribe/**"));
+//            csrf.csrfTokenRepository(csrfTokenRepository());
+//            csrf.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler());
+//        });
+        http.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http.csrf(AbstractHttpConfigurer::disable);
         http.cors(cors -> corsConfigurationSource());
         http.addFilterBefore(expiredPasswordFilter, BasicAuthenticationFilter.class);
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(csrfLoggingFilter, CsrfFilter.class);
 
         return http.build();
     }
+
+
+//    @Bean
+//    public CsrfTokenRepository csrfTokenRepository() {
+//        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+//        repository.setCookieName("XSRF-TOKEN"); // Имя cookie
+//        repository.setHeaderName("X-CSRF-TOKEN"); // Имя заголовка
+//        return repository;
+//    }
+
+//    @Bean
+//    public CsrfTokenRepository csrfTokenRepository() {
+//        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+//        repository.setCookieName("XSRF-TOKEN"); // Имя cookie
+//        repository.setHeaderName("X-CSRF-TOKEN"); // Имя заголовка
+//        repository.setCookiePath("/"); // Глобальная область действия cookie
+//        //repository.setCookieSecure(true); // Для HTTPS (можно отключить для разработки)
+//        repository.setCookieHttpOnly(true); // Cookie недоступен JavaScript
+//        repository.setCookieMaxAge(3600); // Установите срок действия cookie (в секундах)
+//        return repository;
+//    }
+
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 //        configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://10.0.0.6:3000", "https://vp-licence.ru", "http://vp-licence.ru", "https://5.35.89.231", "http://5.35.89.231"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowCredentials(true);
-        configuration.addAllowedHeader("*");
+        //configuration.setAllowedHeaders(Arrays.asList("X-CSRF-TOKEN", "x-csrf-token", "X-Csrf-Token"));
+//        configuration.setAllowedHeaders(Arrays.asList("X-Requested-With", "Origin", "Content-Type", "Accept",
+//                "Authorization", "Access-Control-Allow-Credentials", "Access-Control-Allow-Headers", "Access-Control-Allow-Methods",
+//                "Access-Control-Allow-Origin", "Access-Control-Expose-Headers", "Access-Control-Max-Age",
+//                "Access-Control-Request-Headers", "Access-Control-Request-Method", "Age", "Allow", "Alternates",
+//                "Content-Range", "Content-Disposition", "Content-Description","X-CSRF-TOKEN", "x-csrf-token", "X-Csrf-Token"));
+        //configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("X-CSRF-Token"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 
-    @Bean
-    public CsrfTokenRepository csrfTokenRepository() {
-        HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
-        repository.setHeaderName("X-CSRF-TOKEN");
-        return repository;
-    }
+//    @Bean
+//    public CsrfTokenRepository csrfTokenRepository() {
+//        HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
+//        repository.setHeaderName("X-CSRF-TOKEN");
+//        return repository;
+//    }
 
     @Bean
     public DaoAuthenticationProvider daoAuthenticationProvider() {

@@ -2,12 +2,14 @@ package com.telran.studentservice.persistence;
 
 import com.telran.studentservice.dto.StudentsAddDataDto;
 import com.telran.studentservice.dto.StudentsPromoteDataDto;
+import com.telran.studentservice.dto.StudentsUpdateDataDto;
 import com.telran.studentservice.persistence.current.StudentEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
@@ -35,11 +37,11 @@ public abstract class AbstractStudent {
     @Column(name = "comment")
     private String comment;
     @Column(name = "full_payment")
-    private int fullPayment;
+    private BigDecimal fullPayment;
     @Column(name = "documents_done")
     private boolean documentsDone;
 
-    public AbstractStudent(String contactName, String phone, String email, int statusId, int branchId, UUID targetCourseId, String comment, int fullPayment, boolean documentsDone) {
+    public AbstractStudent(String contactName, String phone, String email, int statusId, int branchId, UUID targetCourseId, String comment, BigDecimal fullPayment, boolean documentsDone) {
         this.studentId = UUID.randomUUID();
         this.contactName = contactName;
         this.phone = phone;
@@ -54,6 +56,18 @@ public abstract class AbstractStudent {
 
     public AbstractStudent(StudentsAddDataDto studentsDataDto) {
         this.studentId = UUID.randomUUID();
+        this.contactName = studentsDataDto.getContactName();
+        this.phone = studentsDataDto.getPhone();
+        this.email = studentsDataDto.getEmail();
+        this.statusId = studentsDataDto.getStatusId();
+        this.branchId = studentsDataDto.getBranchId();
+        this.targetCourseId = studentsDataDto.getTargetCourseId();
+        this.comment = studentsDataDto.getComment();
+        this.fullPayment = studentsDataDto.getFullPayment();
+        this.documentsDone = studentsDataDto.isDocumentsDone();
+    }
+
+    public AbstractStudent(StudentsUpdateDataDto studentsDataDto) {
         this.contactName = studentsDataDto.getContactName();
         this.phone = studentsDataDto.getPhone();
         this.email = studentsDataDto.getEmail();

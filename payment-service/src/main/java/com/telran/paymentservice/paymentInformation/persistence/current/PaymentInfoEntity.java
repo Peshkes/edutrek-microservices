@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -17,8 +18,8 @@ import java.util.UUID;
 @Table(schema = "current", name = "payment_information")
 public class PaymentInfoEntity extends AbstractPaymentInformation {
 
-    public PaymentInfoEntity( UUID studentNum, int paymentTypeId, int paymentUmount, String paymentDetails) {
-        super( studentNum, paymentTypeId, paymentUmount, paymentDetails);
+    public PaymentInfoEntity(UUID studentNum, int paymentTypeId, BigDecimal paymentAmount, String paymentDetails) {
+        super( studentNum, paymentTypeId, paymentAmount, paymentDetails);
     }
 
 }

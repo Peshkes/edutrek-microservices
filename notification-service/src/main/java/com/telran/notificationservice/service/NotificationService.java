@@ -1,32 +1,33 @@
 package com.telran.notificationservice.service;
 
-import com.telran.notificationservice.dto.NotificationDataDto;
-import com.telran.notificationservice.dto.NotificationDto;
-import com.telran.notificationservice.dto.NotificationSendDataDto;
-import com.telran.notificationservice.dto.TargetEntityDataDto;
-import com.telran.notificationservice.error.DatabaseException.*;
-import com.telran.notificationservice.error.Exceptions.*;
+import com.telran.notificationservice.blocking.Lockable;
+import com.telran.notificationservice.dto.*;
+import com.telran.notificationservice.error.DatabaseException.DatabaseAddingException;
+import com.telran.notificationservice.error.DatabaseException.DatabaseDeletingException;
+import com.telran.notificationservice.error.Exceptions.NotificationNotFoundException;
+import com.telran.notificationservice.error.Exceptions.TargetEntityNotFoundException;
 import com.telran.notificationservice.logging.Loggable;
 import com.telran.notificationservice.persistence.AbstractNotificationDocument;
 import com.telran.notificationservice.persistence.EntityTypes;
 import com.telran.notificationservice.persistence.INotificationsRepository;
 import com.telran.notificationservice.persistence.contact_notifications.ContactNotificationDocument;
 import com.telran.notificationservice.persistence.contact_notifications.ContactNotificationsRepository;
-import com.telran.notificationservice.persistence.group_notifications.GroupNotificationsRepository;
 import com.telran.notificationservice.persistence.group_notifications.GroupNotificationDocument;
-import com.telran.notificationservice.persistence.lecturer_notifications.LecturerNotificationsRepository;
+import com.telran.notificationservice.persistence.group_notifications.GroupNotificationsRepository;
 import com.telran.notificationservice.persistence.lecturer_notifications.LecturerNotificationDocument;
-import com.telran.notificationservice.persistence.student_notifications.StudentNotificationsRepository;
+import com.telran.notificationservice.persistence.lecturer_notifications.LecturerNotificationsRepository;
 import com.telran.notificationservice.persistence.student_notifications.StudentNotificationDocument;
-
-import jakarta.validation.Valid;
+import com.telran.notificationservice.persistence.student_notifications.StudentNotificationsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.UUID;
 
 
 @Service
@@ -40,12 +41,10 @@ public class NotificationService {
     private final SseService sseService;
     private final NotificationsRabbitProducer rabbitProducer;
 
-
     @Loggable
     public AbstractNotificationDocument getById(UUID id, EntityTypes entityType) {
-        TargetEntityDataDto<? extends AbstractNotificationDocument> targetEntityDataDto = chooseRepository(entityType);
-        INotificationsRepository<? extends AbstractNotificationDocument> repository = targetEntityDataDto.getRepository();
-        return repository.findById(id).orElseThrow(() -> new NotificationNotFoundException(id.toString()));
+        INotificationsRepository<? extends AbstractNotificationDocument> repository = chooseRepository(entityType).getRepository();
+        return repository.findByEntityId(id).orElseThrow(() -> new NotificationNotFoundException(id.toString()));
     }
 
     @Loggable
@@ -55,37 +54,41 @@ public class NotificationService {
 
     private TargetEntityDataDto<? extends AbstractNotificationDocument> chooseRepository(EntityTypes entityType) {
         return switch (entityType) {
-            case CONTACT -> new TargetEntityDataDto<>(contactNotificationsRepository, ContactNotificationDocument::new);
-            case STUDENT -> new TargetEntityDataDto<>(studentNotificationsRepository, StudentNotificationDocument::new);
-            case GROUP -> new TargetEntityDataDto<>(groupNotificationsRepository, GroupNotificationDocument::new);
-            case LECTURER ->
+            case CONTACT, contact ->
+                    new TargetEntityDataDto<>(contactNotificationsRepository, ContactNotificationDocument::new);
+            case STUDENT, student ->
+                    new TargetEntityDataDto<>(studentNotificationsRepository, StudentNotificationDocument::new);
+            case GROUP, group ->
+                    new TargetEntityDataDto<>(groupNotificationsRepository, GroupNotificationDocument::new);
+            case LECTURER, lecturer ->
                     new TargetEntityDataDto<>(lecturerNotificationsRepository, LecturerNotificationDocument::new);
         };
     }
 
     @Loggable
+    @Lockable
     @Transactional
     @SuppressWarnings("unchecked")
-    public <T extends AbstractNotificationDocument> void addNotificationToId(UUID entityId, NotificationDto notificationDto, EntityTypes entityType) {
+    public <T extends AbstractNotificationDocument> void addNotificationToId(UUID entityId, NotificationDto notificationDto, EntityTypes entityType, UUID recipientId) {
+        String entityName = entityType.toString();
         if (!checkEntity(entityId, entityType)) throw new TargetEntityNotFoundException(entityType, entityId);
         TargetEntityDataDto<? extends AbstractNotificationDocument> targetEntityDataDto = chooseRepository(entityType);
         INotificationsRepository<T> repository = (INotificationsRepository<T>) targetEntityDataDto.getRepository();
-        T notification = repository.findById(entityId).orElse(null);
+        T notification = (T) repository.findByEntityId(entityId).orElse(null);
+
         NotificationDataDto notificationDataDto;
-        if (notification != null) {
-            List<NotificationDataDto> notificationsList = notification.getNotificationData();
-            if (!notificationsList.isEmpty()) {
-                notificationDataDto = new NotificationDataDto(notificationsList.get(notificationsList.size() - 1).getNotificationId() + 1, notificationDto);
-                notificationsList.add(notificationDataDto);
-            } else {
-                throw new NotificationListIsEmptyException(entityId);
-            }
-        } else {
+        if(notification == null){
             List<NotificationDataDto> newList = new ArrayList<>();
-            notificationDataDto = new NotificationDataDto(0, notificationDto);
+            notificationDataDto = new NotificationDataDto(0, notificationDto, recipientId, entityName);
             newList.add(notificationDataDto);
             notification = (T) targetEntityDataDto.getConstructor().apply(entityId, newList);
+        }else {
+            System.out.println(notification.getNotificationData());
+            List<NotificationDataDto> notificationsList = notification.getNotificationData();
+            notificationDataDto = new NotificationDataDto(notificationsList.isEmpty()? 0: notificationsList.get(notificationsList.size() - 1).getNotificationId() + 1, notificationDto, recipientId, entityName);
+            notificationsList.add(notificationDataDto);
         }
+        System.out.println(notification.getNotificationData());
         try {
             repository.save(notification);
         } catch (Exception e) {
@@ -94,17 +97,17 @@ public class NotificationService {
     }
 
     @Loggable
+    @Lockable
     @Transactional
     public void deleteNotificationById(UUID entityId, Integer[] elementNumbers, EntityTypes entityType) {
-        TargetEntityDataDto<? extends AbstractNotificationDocument> targetEntityDataDto = chooseRepository(entityType);
-        INotificationsRepository<? extends AbstractNotificationDocument> repository = targetEntityDataDto.getRepository();
-        if (!repository.existsById(entityId))
+        INotificationsRepository<? extends AbstractNotificationDocument> repository = chooseRepository(entityType).getRepository();
+        if (!repository.existsByEntityId(entityId))
             throw new NotificationNotFoundException(entityId.toString());
         if (elementNumbers != null) {
             repository.deleteNotificationDocumentsById(entityId, elementNumbers);//TODO как быть с ошибками отсутствия такого элемента
         } else {
             try {
-                repository.deleteById(entityId);
+                repository.deleteByEntityId(entityId);
             } catch (Exception e) {
                 throw new DatabaseDeletingException(e.getMessage());
             }
@@ -112,14 +115,14 @@ public class NotificationService {
     }
 
     @Loggable
+    @Lockable
     @Transactional
-    public void updateById(UUID entityId, @Valid NotificationDataDto notificationDataDto, EntityTypes entityType) {
-        TargetEntityDataDto<? extends AbstractNotificationDocument> targetEntityDataDto = chooseRepository(entityType);
-        INotificationsRepository<? extends AbstractNotificationDocument> repository = targetEntityDataDto.getRepository();
-        if (!repository.existsById(entityId))
+    public void updateById(UUID entityId, NotificationUpdateDataDto notificationDataDto, EntityTypes entityType) {
+        INotificationsRepository<? extends AbstractNotificationDocument> repository = chooseRepository(entityType).getRepository();
+        if (!repository.existsByEntityId(entityId))
             throw new NotificationNotFoundException(entityId.toString());
         try {
-            repository.updateNotificationDocumentsByNotificationId(entityId, notificationDataDto.getNotificationId(), notificationDataDto.getScheduledTime(), notificationDataDto.getNotificationText());
+            repository.updateNotificationDocumentsByEntityId(entityId, notificationDataDto.getNotificationId(), notificationDataDto.getScheduledTime(), notificationDataDto.getNotificationText());
         } catch (Exception e) {
             throw new DatabaseDeletingException(e.getMessage());
         }
@@ -151,10 +154,10 @@ public class NotificationService {
 
     private boolean checkEntity(UUID entityId, EntityTypes entityType) {
         return switch (entityType) {
-            case CONTACT -> rabbitProducer.sendContactExists(entityId);
-            case STUDENT -> rabbitProducer.sendStudentExists(entityId);
-            case LECTURER -> rabbitProducer.sendLecturerExists(entityId);
-            case GROUP -> rabbitProducer.sendGroupExists(entityId);
+            case CONTACT, contact -> rabbitProducer.sendContactExists(entityId);
+            case STUDENT, student -> rabbitProducer.sendStudentExists(entityId);
+            case LECTURER, lecturer -> rabbitProducer.sendLecturerExists(entityId);
+            case GROUP, group -> rabbitProducer.sendGroupExists(entityId);
         };
     }
 

@@ -3,6 +3,7 @@ package com.telran.studentservice.persistence.current;
 
 import com.telran.studentservice.dto.StudentsAddDataDto;
 import com.telran.studentservice.dto.StudentsPromoteDataDto;
+import com.telran.studentservice.dto.StudentsUpdateDataDto;
 import com.telran.studentservice.persistence.AbstractStudent;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -23,6 +24,10 @@ public class StudentEntity extends AbstractStudent {
     }
 
     public StudentEntity(StudentsPromoteDataDto studentsDataDto) {
+        super(studentsDataDto);
+    }
+
+    public StudentEntity(StudentsUpdateDataDto studentsDataDto) {
         super(studentsDataDto);
     }
 }

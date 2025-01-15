@@ -26,8 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AuthenticationController {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthenticationController.class);
-    private final JwtClient jwtClient;
+//    private final JwtClient jwtClient;
     private final AuthenticationJWTService authenticationService;
 //    private final AuthenticationBaseService authenticationService;
 
@@ -35,12 +34,6 @@ public class AuthenticationController {
     @ResponseStatus(HttpStatus.OK)
     public List<PublicAccountDataDto> getAllAccounts() {
         return authenticationService.getAllAccounts();
-    }
-
-    @GetMapping("/csrf")
-    @ResponseStatus(HttpStatus.OK)
-    public CsrfToken getCsrfToken(HttpServletRequest request) {
-        return (CsrfToken) request.getAttribute(CsrfToken.class.getName());
     }
 
     @GetMapping("/id/{id}")
@@ -85,9 +78,8 @@ public class AuthenticationController {
     @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<String> logout(HttpServletResponse response) {
 
-        response.addCookie(createCookie("accessToken", null));
-        response.addCookie(createCookie("refreshToken", null));
-
+        response.addCookie(createCookie("accessToken", null, 0));
+        response.addCookie(createCookie("refreshToken", null, 0));
         return ResponseEntity.ok("Logout successful");
     }
 
@@ -127,6 +119,12 @@ public class AuthenticationController {
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setSecure(true);
+        return cookie;
+    }
+
+    private Cookie createCookie(String name, String value, int age) {
+        Cookie cookie = createCookie(name, value);
+        cookie.setMaxAge(age);
         return cookie;
     }
 

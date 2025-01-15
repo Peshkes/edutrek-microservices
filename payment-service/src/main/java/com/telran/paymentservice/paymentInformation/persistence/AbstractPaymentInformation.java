@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -31,12 +32,12 @@ public class AbstractPaymentInformation {
     private int paymentTypeId;
 
     @Column(name = "payment_amount")
-    private int paymentAmount;
+    private BigDecimal paymentAmount;
 
     @Column(name = "payment_details")
     private String paymentDetails;
 
-    public AbstractPaymentInformation(UUID studentNum, int paymentTypeId, int paymentAmount, String paymentDetails) {
+    public AbstractPaymentInformation(UUID studentNum, int paymentTypeId, BigDecimal paymentAmount, String paymentDetails) {
         this.paymentId = UUID.randomUUID();
         this.studentId = studentNum;
         this.paymentDate = LocalDate.now();

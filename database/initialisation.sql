@@ -69,7 +69,7 @@ CREATE TABLE current.students
     target_course_id uuid         NOT NULL,
     FOREIGN KEY (target_course_id) REFERENCES current.courses (course_id),
     comment          varchar(255),
-    full_payment     int          NOT NULL,
+    full_payment     decimal(7,2)  NOT NULL,
     documents_done   boolean      NOT NULL
 );
 
@@ -93,7 +93,7 @@ CREATE TABLE current.payment_information
     payment_date    date NOT NULL,
     payment_type_id int  NOT NULL,
     FOREIGN KEY (payment_type_id) REFERENCES current.payment_types (payment_type_id),
-    payment_amount  int  NOT NULL,
+    payment_amount  decimal(7,2)  NOT NULL,
     payment_details varchar(255)
 );
 
@@ -167,25 +167,7 @@ CREATE TABLE current.webinars_by_weekday
     PRIMARY KEY (group_id, weekday_id)
 );
 
-CREATE TABLE current.webinars_by_weekday_archive
-(
-    group_id   uuid NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES current.groups (group_id),
-    weekday_id int  NOT NULL,
-    FOREIGN KEY (weekday_id) REFERENCES current.weekdays (weekday_id),
-    PRIMARY KEY (group_id, weekday_id)
-);
-
 CREATE TABLE current.lessons_by_weekday
-(
-    group_id   uuid NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES current.groups (group_id),
-    weekday_id int  NOT NULL,
-    FOREIGN KEY (weekday_id) REFERENCES current.weekdays (weekday_id),
-    PRIMARY KEY (group_id, weekday_id)
-);
-
-CREATE TABLE current.lessons_by_weekday_archive
 (
     group_id   uuid NOT NULL,
     FOREIGN KEY (group_id) REFERENCES current.groups (group_id),
@@ -226,7 +208,7 @@ CREATE TABLE archive.students
     target_course_id      uuid         NOT NULL,
     FOREIGN KEY (target_course_id) REFERENCES current.courses (course_id),
     comment               varchar(255),
-    full_payment          int          NOT NULL,
+    full_payment          decimal(7,2)  NOT NULL,
     documents_done        boolean      NOT NULL,
     reason_of_archivation varchar(100) NOT NULL,
     archivation_date      date         NOT NULL
@@ -240,7 +222,7 @@ CREATE TABLE archive.payment_information
     payment_date    date NOT NULL,
     payment_type_id int  NOT NULL,
     FOREIGN KEY (payment_type_id) REFERENCES current.payment_types (payment_type_id),
-    payment_amount  int  NOT NULL,
+    payment_amount  decimal(7,2)  NOT NULL,
     payment_details varchar(255)
 );
 
