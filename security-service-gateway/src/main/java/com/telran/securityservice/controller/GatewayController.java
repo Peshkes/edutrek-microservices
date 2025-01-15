@@ -1,16 +1,19 @@
 package com.telran.securityservice.controller;
 
+import com.telran.securityservice.dto.CsrfResponse;
+import com.telran.securityservice.service.CsrfService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.Enumeration;
 import java.util.UUID;
 
@@ -19,6 +22,8 @@ import java.util.UUID;
 public class GatewayController {
 
     private static final Logger log = LoggerFactory.getLogger(GatewayController.class);
+    private final CsrfService csrfService;
+
     @Value("${service.authentication.url}")
     private String authenticationServiceUrl;
 
@@ -89,8 +94,11 @@ public class GatewayController {
 
     @GetMapping("/csrf")
     @ResponseStatus(HttpStatus.OK)
-    public CsrfToken getCsrfToken(HttpServletRequest request) {
-        return (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+    public CsrfResponse getCsrfToken(HttpServletResponse response) {
+        String csrf = csrfService.generateToken();
+        String header = "X-CSRF-TOKEN";
+        response.addCookie(createCookie(header, csrf));
+        return new CsrfResponse(csrf, header);
     }
 
     @RequestMapping(value = "/**")
@@ -122,5 +130,13 @@ public class GatewayController {
         } catch (HttpClientErrorException e) {
             return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
         }
+    }
+
+    private Cookie createCookie(String name, String value) {
+        Cookie cookie = new Cookie(name, value);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setSecure(false);
+        return cookie;
     }
 }

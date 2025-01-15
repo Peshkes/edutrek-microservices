@@ -1,7 +1,6 @@
 package com.telran.authenticationservice.controller;
 
 import com.telran.authenticationservice.dto.*;
-import com.telran.authenticationservice.feign.JwtClient;
 import com.telran.authenticationservice.persistence.AccountDocument;
 import com.telran.authenticationservice.service.AuthenticationJWTService;
 import jakarta.servlet.http.Cookie;
@@ -10,11 +9,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.validator.constraints.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -118,7 +114,7 @@ public class AuthenticationController {
         Cookie cookie = new Cookie(name, value);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
-        cookie.setSecure(true);
+        cookie.setSecure(false);
         return cookie;
     }
 

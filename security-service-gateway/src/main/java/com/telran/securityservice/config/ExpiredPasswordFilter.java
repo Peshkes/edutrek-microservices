@@ -25,7 +25,6 @@ public class ExpiredPasswordFilter extends OncePerRequestFilter {
     private final AuthenticationClient client;
 
     @Value("${password.activation.period}")
-
     private int activationPeriod;
 
     @Override
