@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -21,10 +22,10 @@ public class StudentWithGroupDto {
     private int branchId;
     private UUID targetCourseId;
     private String comment;
-    private double fullPayment;
+    private BigDecimal fullPayment;
     private boolean documentsDone;
     private List<GroupsDto> groups;
-    private double amountAlreadyPayed;
+    private BigDecimal amountAlreadyPayed;
 
     public StudentWithGroupDto(AbstractStudent abstractStudent) {
         this.studentId = abstractStudent.getStudentId();

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -22,6 +23,6 @@ public interface PaymentsFeignClient {
     void moveToArchiveById(@PathVariable UUID id);
 
     @RequestMapping(method = RequestMethod.POST, value = "/payments/studentids")
-    Map<UUID, Double> getStudentsByGroup(@RequestBody Set<UUID> id);
+    Map<UUID, BigDecimal> getStudentsByGroup(@RequestBody Set<UUID> id);
 
 }

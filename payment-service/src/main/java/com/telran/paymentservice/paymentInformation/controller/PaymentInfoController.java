@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -41,7 +42,7 @@ public class PaymentInfoController {
 
     @PostMapping("/studentids")
     @ResponseStatus(HttpStatus.OK)
-    public Map<UUID, Double> findAllByStudentId(@RequestBody Set<UUID> studentIds) {
+    public Map<UUID, BigDecimal> findAllByStudentId(@RequestBody Set<UUID> studentIds) {
         return paymentInfoService.getAllByStudentId(studentIds);
     }
 

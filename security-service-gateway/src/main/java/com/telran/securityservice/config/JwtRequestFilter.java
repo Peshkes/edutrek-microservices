@@ -26,10 +26,10 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         if (checkEndpoint(request.getMethod(), request.getServletPath())) {
+            logger.info("Inside IF ");
             String accessToken = getTokenFromCookies(request);
 //            String authorizationHeader = request.getHeader("Authorization");
 //            String accessToken = jwtClient.extractTokenFromAuthorizationHeader(authorizationHeader);
-
             String username = null;
             if (accessToken != null) {
                 try {
@@ -60,7 +60,8 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private boolean checkEndpoint(String method, String servletPath) {
         boolean isRefresh = method.equals("POST") && servletPath.equals("/auth/refresh");
         boolean isSignIn = method.equals("POST") && servletPath.equals("/auth");
-        return !(isSignIn || isRefresh );
+        boolean isCsrf = method.equals("GET") && servletPath.equals("/csrf");
+        return !(isSignIn || isRefresh || isCsrf);
     }
 
     private String getTokenFromCookies(HttpServletRequest request) {

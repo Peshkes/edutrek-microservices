@@ -27,6 +27,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -98,7 +99,7 @@ public class StudentsService {
     private List<StudentWithGroupDto> addGroupsAndPaymentAmountToFoundStudents(List<? extends AbstractStudent> foundStudents) {
         Set<UUID> keysToRequest = foundStudents.stream().map(AbstractStudent::getStudentId).collect(Collectors.toSet());
         Map<UUID, List<GetStudentsByGroupDto>> studentsByGroup = groupFeignClient.getStudentsByGroup(keysToRequest);
-        Map<UUID, Double> studentPaymentInfo = paymentsFeignClient.getStudentsByGroup(keysToRequest);
+        Map<UUID, BigDecimal> studentPaymentInfo = paymentsFeignClient.getStudentsByGroup(keysToRequest);
         return foundStudents.stream().map(s -> {
             UUID id = s.getStudentId();
             StudentWithGroupDto student = new StudentWithGroupDto(s);
@@ -188,8 +189,8 @@ public class StudentsService {
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    public void updateById(StudentsPromoteDataDto studentData) {
-        UUID id = studentData.getContactId();
+    public void updateById(StudentsUpdateDataDto studentData, UUID id) {
+        //UUID id = studentData.getContactId();
         checkStatusCourseBranch(studentData.getBranchId(), studentData.getTargetCourseId());
         AbstractStudent entity = repository.getByStudentId(id).or(() -> archiveRepository.findById(id)).orElseThrow(() -> new StudentNotFoundException(id.toString()));
         List<String> updates = updateEntity(studentData, entity);
@@ -199,7 +200,7 @@ public class StudentsService {
                 log != null ? log : " - Contact updated. Updated info: " + updates);
     }
 
-    private <T extends AbstractStudent> List<String> updateEntity(StudentsPromoteDataDto studentData, T entity) {
+    private <T extends AbstractStudent> List<String> updateEntity(StudentsUpdateDataDto studentData, T entity) {
         List<String> updates = new ArrayList<>();
 
         String name = studentData.getContactName();
@@ -238,8 +239,8 @@ public class StudentsService {
             updates.add("course");
         }
 
-        double fullPayment = studentData.getFullPayment();
-        if (entity.getFullPayment() != fullPayment) {
+        BigDecimal fullPayment = studentData.getFullPayment();
+        if (!Objects.equals(entity.getFullPayment(), fullPayment)) {
             entity.setFullPayment(fullPayment);
             updates.add("payment amount");
         }

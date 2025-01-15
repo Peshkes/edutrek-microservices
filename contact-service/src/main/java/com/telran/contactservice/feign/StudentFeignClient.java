@@ -25,8 +25,8 @@ public interface StudentFeignClient {
     @RequestMapping(method = RequestMethod.GET, value = "/students/find/{phone}/{email}")
     AbstractStudentDto findByPhoneOrEmailAndDelete(@PathVariable String phone, @PathVariable String email);
 
-    @RequestMapping(method = RequestMethod.GET, value = "/students/{id}")
-    AbstractStudentDto promoteContactToStudentById(@PathVariable UUID id, StudentsFromContactDataDto data);
+//    @RequestMapping(method = RequestMethod.GET, value = "/students/{id}")
+//    AbstractStudentDto promoteContactToStudentById(@PathVariable UUID id, StudentsFromContactDataDto data);
 
     @RequestMapping(method = RequestMethod.POST, value = "/students/find_students_contacts")
     List<AbstractStudentDto> findStudentsForContacts(@RequestBody FindStudentsForContactsDto data);

@@ -82,10 +82,9 @@ public class StudentsController {
         return new ResponseEntity<>("Student deleted", HttpStatus.OK);
     }
 
-
-    @PutMapping("")
-    public ResponseEntity<String> updateById(@RequestBody @Valid StudentsPromoteDataDto contactData) {
-        studentService.updateById(contactData);
+    @PutMapping("/{id}")
+    public ResponseEntity<String> updateById(@RequestBody @Valid StudentsUpdateDataDto contactData,@PathVariable UUID id) {
+        studentService.updateById(contactData, id);
         return new ResponseEntity<>("Student updated", HttpStatus.OK);
     }
 

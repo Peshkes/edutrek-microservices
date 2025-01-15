@@ -28,6 +28,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -56,11 +57,12 @@ public class PaymentInfoService {
     }
 
     @Transactional
-    public Map<UUID, Double> getAllByStudentId(Set<UUID> studentIds) {
+    public Map<UUID, BigDecimal> getAllByStudentId(Set<UUID> studentIds) {
         List<PaymentInfoReturnDto> foundPayments = repository.findAllByStudentId(studentIds);
-        return foundPayments.stream().collect(Collectors.groupingBy(PaymentInfoReturnDto::getStudentId, Collectors.summingDouble(PaymentInfoReturnDto::getPaymentAmount)));
-
+        return foundPayments.stream().collect(Collectors.groupingBy(PaymentInfoReturnDto::getStudentId, Collectors.reducing(BigDecimal.ZERO, PaymentInfoReturnDto::getPaymentAmount, BigDecimal::add)
+        ));
     }
+
 
     @Loggable
     @Transactional
@@ -83,7 +85,7 @@ public class PaymentInfoService {
             repository.save(new PaymentInfoEntity(
                     paymentInfoDtoData.getStudentId(),
                     paymentInfoDtoData.getPaymentTypeId(),
-                    paymentInfoDtoData.getPaymentUmount(),
+                    paymentInfoDtoData.getPaymentAmount(),
                     paymentInfoDtoData.getPaymentDetails()));
         } catch (Exception e) {
             throw new DatabaseAddingException(e.getMessage());
@@ -122,7 +124,7 @@ public class PaymentInfoService {
         entity.setStudentId(paymentInfoDataDto.getStudentId());
         entity.setPaymentDate(paymentInfoDataDto.getPaymentDate());
         entity.setPaymentTypeId(paymentInfoDataDto.getPaymentTypeId());
-        entity.setPaymentAmount(paymentInfoDataDto.getPaymentUmount());
+        entity.setPaymentAmount(paymentInfoDataDto.getPaymentAmount());
         entity.setPaymentDetails(paymentInfoDataDto.getPaymentDetails());
     }
 
