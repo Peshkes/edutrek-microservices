@@ -17,8 +17,6 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -37,12 +35,10 @@ public class SecurityConfig {
     private final OwnerAuthorizationManager ownerAuthorizationManager;
     private final UserConfig userConfig;
     private final ExpiredPasswordFilter expiredPasswordFilter;
-    private final CsrfLoggingFilter csrfLoggingFilter;
+    private final CsrfTokenFilter csrfTokenFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
-
 
         http.authorizeHttpRequests((authorizeHttpRequests) ->
                 authorizeHttpRequests
@@ -122,34 +118,13 @@ public class SecurityConfig {
         http.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.csrf(AbstractHttpConfigurer::disable);
         http.cors(cors -> corsConfigurationSource());
-        http.addFilterBefore(expiredPasswordFilter, BasicAuthenticationFilter.class);
+
+        http.addFilterBefore(csrfTokenFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
-        http.addFilterAfter(csrfLoggingFilter, CsrfFilter.class);
+        http.addFilterAfter(expiredPasswordFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
-
-//    @Bean
-//    public CsrfTokenRepository csrfTokenRepository() {
-//        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-//        repository.setCookieName("XSRF-TOKEN"); // Имя cookie
-//        repository.setHeaderName("X-CSRF-TOKEN"); // Имя заголовка
-//        return repository;
-//    }
-
-//    @Bean
-//    public CsrfTokenRepository csrfTokenRepository() {
-//        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-//        repository.setCookieName("XSRF-TOKEN"); // Имя cookie
-//        repository.setHeaderName("X-CSRF-TOKEN"); // Имя заголовка
-//        repository.setCookiePath("/"); // Глобальная область действия cookie
-//        //repository.setCookieSecure(true); // Для HTTPS (можно отключить для разработки)
-//        repository.setCookieHttpOnly(true); // Cookie недоступен JavaScript
-//        repository.setCookieMaxAge(3600); // Установите срок действия cookie (в секундах)
-//        return repository;
-//    }
-
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
@@ -158,13 +133,6 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://10.0.0.6:3000", "https://vp-licence.ru", "http://vp-licence.ru", "https://5.35.89.231", "http://5.35.89.231"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowCredentials(true);
-        //configuration.setAllowedHeaders(Arrays.asList("X-CSRF-TOKEN", "x-csrf-token", "X-Csrf-Token"));
-//        configuration.setAllowedHeaders(Arrays.asList("X-Requested-With", "Origin", "Content-Type", "Accept",
-//                "Authorization", "Access-Control-Allow-Credentials", "Access-Control-Allow-Headers", "Access-Control-Allow-Methods",
-//                "Access-Control-Allow-Origin", "Access-Control-Expose-Headers", "Access-Control-Max-Age",
-//                "Access-Control-Request-Headers", "Access-Control-Request-Method", "Age", "Allow", "Alternates",
-//                "Content-Range", "Content-Disposition", "Content-Description","X-CSRF-TOKEN", "x-csrf-token", "X-Csrf-Token"));
-        //configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("X-CSRF-Token"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
