@@ -35,7 +35,7 @@ public class SecurityConfig {
     private final OwnerAuthorizationManager ownerAuthorizationManager;
     private final UserConfig userConfig;
     private final ExpiredPasswordFilter expiredPasswordFilter;
-    private final CsrfTokenFilter csrfTokenFilter;
+   // private final CsrfTokenFilter csrfTokenFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -119,7 +119,7 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable);
         http.cors(cors -> corsConfigurationSource());
 
-        http.addFilterBefore(csrfTokenFilter, UsernamePasswordAuthenticationFilter.class);
+    //    http.addFilterBefore(csrfTokenFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterAfter(expiredPasswordFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -133,6 +133,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://10.0.0.6:3000", "https://vp-licence.ru", "http://vp-licence.ru", "https://5.35.89.231", "http://5.35.89.231"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowCredentials(true);
+        configuration.setAllowedHeaders(List.of("Origin", "X-CSRF-TOKEN", "Content-Type", "Accept", "X-Requested-With", "Authorization"));
         configuration.setExposedHeaders(List.of("X-CSRF-Token"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
