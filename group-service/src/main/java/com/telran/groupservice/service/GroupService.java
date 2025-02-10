@@ -48,8 +48,40 @@ public class GroupService {
     private final GroupsRabbitProducer rabbitProducer;
 
     @Loggable
-    public BaseGroup getById(UUID groupId) {
-        return repository.getGroupByGroupId(groupId).or(() -> archiveRepository.getGroupByGroupId(groupId)).orElseThrow(() -> new GroupNotFoundException(groupId.toString()));
+    @SuppressWarnings("unchecked")
+    public <G extends BaseGroup, L extends BaseLecturerByGroup> FullGroupDto getById(UUID groupId) {
+        G group = (G) repository.getGroupByGroupId(groupId)
+                .or(() -> archiveRepository.getGroupByGroupId(groupId))
+                .orElseThrow(() -> new GroupNotFoundException(groupId.toString()));
+
+        List<L> lecturers;
+        if (group instanceof GroupEntity) {
+            lecturers = (List<L>) lecturersByGroupRepository.getByGroupId(groupId);
+        } else {
+            lecturers = (List<L>) lecturersByGroupArchiveRepository.getByGroupId(groupId);
+        }
+
+        List<LessonsByWeekdayEntity> lessonsByWeekdayEntity = lessonsByWeekdayRepository.getByGroupId(groupId);
+        List<WebinarsByWeekdayEntity> webinarsByWeekdayEntity = webinarsByWeekdayRepository.getByGroupId(groupId);
+
+        return createFullGroupDto(group, lecturers, lessonsByWeekdayEntity, webinarsByWeekdayEntity);
+    }
+
+    private <G extends BaseGroup, L extends BaseLecturerByGroup> FullGroupDto createFullGroupDto(G group, List<L> lecturers, List<LessonsByWeekdayEntity> lessonsByWeekdayEntity, List<WebinarsByWeekdayEntity> webinarsByWeekdayEntity) {
+        return new FullGroupDto(
+                group.getGroupId(),
+                group.getGroupName(),
+                group.getStartDate(),
+                group.getFinishDate(),
+                group.getCourseId(),
+                group.getSlackLink(),
+                group.getWhatsAppLink(),
+                group.getSkypeLink(),
+                group.getDeactivateAfter(),
+                lessonsByWeekdayEntity.stream().map(LessonsByWeekdayEntity::getWeekdayId).toList(),
+                webinarsByWeekdayEntity.stream().map(WebinarsByWeekdayEntity::getWeekdayId).toList(),
+                lecturers
+        );
     }
 
     @Loggable

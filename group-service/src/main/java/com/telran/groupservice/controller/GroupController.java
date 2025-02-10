@@ -1,9 +1,6 @@
 package com.telran.groupservice.controller;
 
-import com.telran.groupservice.dto.AddGroupDto;
-import com.telran.groupservice.dto.ChangeLecturersDto;
-import com.telran.groupservice.dto.GetStudentsByGroupDto;
-import com.telran.groupservice.dto.PaginationGroupResponseDto;
+import com.telran.groupservice.dto.*;
 import com.telran.groupservice.persistence.groups.BaseGroup;
 import com.telran.groupservice.service.GroupService;
 import jakarta.validation.Valid;
@@ -26,7 +23,7 @@ public class GroupController {
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public BaseGroup getGroupById(@PathVariable @UUID String id) {
+    public FullGroupDto getGroupById(@PathVariable @UUID String id) {
         return groupService.getById(java.util.UUID.fromString(id));
     }
 
