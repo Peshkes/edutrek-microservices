@@ -242,7 +242,7 @@ public class ContactsService {
     @Loggable
     @Transactional
     @Retryable(retryFor = {FeignException.class}, backoff = @Backoff(delay = 2000))
-    public void promoteContactToStudentById(@Valid StudentsFromContactDataDto studentData) {
+    public void promoteContactToStudentById(StudentsFromContactDataDto studentData) {
         UUID id = studentData.getContactId();
         ContactsEntity contact = contactRepository.findById(id).orElseThrow(() -> new ContactNotFoundException(id.toString()));
         if (!studentFeignClient.existsById(id)) {

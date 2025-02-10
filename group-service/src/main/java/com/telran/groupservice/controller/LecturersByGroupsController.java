@@ -27,7 +27,7 @@ public class LecturersByGroupsController {
     }
 
     @ResponseStatus(HttpStatus.OK)
-    @PutMapping("/lecturers_by_groups/archive/{lecturer_id}")
+    @PutMapping("/archive/{lecturer_id}")
     public void archiveLecturersByLecturerId(@PathVariable UUID lecturer_id) {
         service.archiveLecturersByLecturerId(lecturer_id);
     }
