@@ -13,4 +13,5 @@ import java.util.UUID;
 public class ComposeLecturerKey implements Serializable {
     private UUID groupId;
     private UUID lecturerId;
+    private boolean isWebinarist;
 }

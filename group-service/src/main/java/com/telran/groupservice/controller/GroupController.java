@@ -85,7 +85,7 @@ public class GroupController {
     @PutMapping("/{fromId}/move/{toId}")
     public ResponseEntity<String> moveStudentsBetweenGroups(@PathVariable @UUID String fromId, @PathVariable @UUID String toId, @RequestBody List<java.util.UUID> students) {
         groupService.moveStudentsBetweenGroups(java.util.UUID.fromString(fromId), java.util.UUID.fromString(toId), students);
-        return new ResponseEntity<>("Group created", HttpStatus.CREATED);
+        return new ResponseEntity<>("Students moved", HttpStatus.CREATED);
     }
 
     @PutMapping("/deactivate/students/{id}")
