@@ -87,9 +87,7 @@ public class GroupService {
     @Loggable
     public Map<UUID, List<GetStudentsByGroupDto>> getStudentsByGroup(Set<UUID> ids) {
         List<GetStudentsByGroupDto> list = studentsByGroupRepository.findGroupsByStudentIds(ids);
-        Map<UUID, List<GetStudentsByGroupDto>> map = list.stream().collect(Collectors.groupingBy(GetStudentsByGroupDto::getStudentId, Collectors.toList()));
-        System.out.println("Map: " + map);
-        return map;
+        return list.stream().collect(Collectors.groupingBy(GetStudentsByGroupDto::getStudentId, Collectors.toList()));
     }
 
     @Loggable
@@ -273,7 +271,7 @@ public class GroupService {
         if (repository.existsById(fromId)) {
             if (repository.existsById(toId)) {
                 for (UUID student : students) {
-                    if (studentsByGroupRepository.existsByGroupIdAndStudentId(toId, student)) {
+                    if (!studentsByGroupRepository.existsByGroupIdAndStudentId(toId, student)) {
                         StudentsByGroupEntity studentsByGroupEntity = studentsByGroupRepository.findById(new ComposeStudentsKey(fromId, student)).orElseThrow(() -> new StudentNotFoundInThisGroupException(fromId.toString(), student.toString()));
                         try {
                             studentsByGroupRepository.save(new StudentsByGroupEntity(toId, student, true));

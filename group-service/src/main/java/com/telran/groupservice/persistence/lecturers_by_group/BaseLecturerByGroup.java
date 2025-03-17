@@ -23,6 +23,7 @@ public abstract class BaseLecturerByGroup {
     @Id
     @Column(name = "lecturer_id")
     private UUID lecturerId;
+    @Id
     @Column(name = "is_webinarist")
     private boolean isWebinarist;
     @Column(name = "is_active")
