@@ -73,7 +73,7 @@ public class GatewayController {
             case "lecturers" -> lecturersServiceUrl;
             case "logs" -> logsServiceUrl;
             case "notifications" -> notificationsServiceUrl;
-            case "payments" -> paymentsServiceUrl;
+            case "payments", "payment_types" -> paymentsServiceUrl;
             case "statuses" -> statusesServiceUrl;
             case "students" -> studentsServiceUrl;
             default -> throw new IllegalArgumentException("No matching service found for URI: " + requestUri);
